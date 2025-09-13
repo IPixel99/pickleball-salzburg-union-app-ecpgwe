@@ -234,6 +234,23 @@ export const uploadProfileImage = async (
 
     console.log('Public URL generated:', publicUrl);
 
+    // Update the user's profile with the new avatar URL
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ 
+        avatar_url: publicUrl,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (profileError) {
+      console.error('Error updating profile with avatar URL:', profileError);
+      // Don't fail the upload, just log the error
+      console.warn('Avatar uploaded but profile not updated:', profileError.message);
+    } else {
+      console.log('Profile updated with new avatar URL');
+    }
+
     return {
       success: true,
       url: publicUrl
@@ -277,6 +294,23 @@ export const deleteProfileImage = async (
     if (error) {
       console.error('Error deleting profile image:', error);
       return false;
+    }
+
+    // Update the user's profile to remove the avatar URL
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ 
+        avatar_url: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (profileError) {
+      console.error('Error updating profile after avatar deletion:', profileError);
+      // Don't fail the deletion, just log the error
+      console.warn('Avatar deleted but profile not updated:', profileError.message);
+    } else {
+      console.log('Profile updated after avatar deletion');
     }
 
     console.log('Profile image deleted successfully');
@@ -371,4 +405,71 @@ export const resizeImage = async (
   // For now, just return the original URI
   // In the future, we could implement image resizing here using expo-image-manipulator
   return uri;
+};
+
+// Helper function to get all user avatars
+export const getUserAvatars = async (userId: string): Promise<string[]> => {
+  try {
+    const { data, error } = await supabase.storage
+      .from('avatars')
+      .list(userId, {
+        limit: 100,
+        offset: 0,
+      });
+
+    if (error) {
+      console.error('Error listing user avatars:', error);
+      return [];
+    }
+
+    if (!data) {
+      return [];
+    }
+
+    // Return full URLs for each avatar
+    return data.map(file => {
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(`${userId}/${file.name}`);
+      return publicUrl;
+    }).filter(url => url);
+  } catch (error) {
+    console.error('Error in getUserAvatars:', error);
+    return [];
+  }
+};
+
+// Helper function to clean up old avatars (keep only the latest 3)
+export const cleanupOldAvatars = async (userId: string): Promise<void> => {
+  try {
+    const { data, error } = await supabase.storage
+      .from('avatars')
+      .list(userId, {
+        limit: 100,
+        offset: 0,
+        sortBy: { column: 'created_at', order: 'desc' }
+      });
+
+    if (error || !data) {
+      console.error('Error listing avatars for cleanup:', error);
+      return;
+    }
+
+    // Keep only the latest 3 avatars, delete the rest
+    if (data.length > 3) {
+      const filesToDelete = data.slice(3).map(file => `${userId}/${file.name}`);
+      
+      const { error: deleteError } = await supabase.storage
+        .from('avatars')
+        .remove(filesToDelete);
+
+      if (deleteError) {
+        console.error('Error cleaning up old avatars:', deleteError);
+      } else {
+        console.log(`Cleaned up ${filesToDelete.length} old avatars for user ${userId}`);
+      }
+    }
+  } catch (error) {
+    console.error('Error in cleanupOldAvatars:', error);
+  }
 };

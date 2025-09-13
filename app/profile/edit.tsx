@@ -8,7 +8,7 @@ import { supabase } from '../../lib/supabase';
 import Icon from '../../components/Icon';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { useAuth } from '../../hooks/useAuth';
-import { uploadProfileImage, deleteProfileImage, validateImageUri } from '../../utils/imageUtils';
+import { uploadProfileImage, deleteProfileImage, validateImageUri, cleanupOldAvatars } from '../../utils/imageUtils';
 
 interface Profile {
   id: string;
@@ -162,22 +162,17 @@ export default function EditProfileScreen() {
     try {
       console.log('Starting image upload process');
       
-      // Delete old avatar if exists
-      if (avatarUrl) {
-        console.log('Deleting old avatar');
-        const deleteSuccess = await deleteProfileImage(avatarUrl, user.id);
-        if (!deleteSuccess) {
-          console.warn('Failed to delete old avatar, continuing with upload');
-        }
-      }
-
-      // Upload new image
+      // Upload new image (this will also update the profile automatically)
       console.log('Uploading new image');
       const result = await uploadProfileImage(uri, user.id);
       
       if (result.success && result.url) {
         console.log('Image upload successful:', result.url);
         setAvatarUrl(result.url);
+        
+        // Clean up old avatars to save storage space
+        await cleanupOldAvatars(user.id);
+        
         Alert.alert('Erfolg', 'Profilbild wurde erfolgreich hochgeladen!');
       } else {
         console.error('Image upload failed:', result.error);

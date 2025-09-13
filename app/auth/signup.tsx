@@ -42,28 +42,35 @@ export default function SignupScreen() {
       return;
     }
 
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      Alert.alert('Fehler', 'Bitte gib eine gültige E-Mail-Adresse ein.');
+      return;
+    }
+
     setIsLoading(true);
-    console.log('Signup attempt with:', { 
-      ...formData, 
-      password: '***', 
-      confirmPassword: '***' 
-    });
+    console.log('SignupScreen: Attempting signup for:', formData.email);
 
     try {
-      await signUp(formData.email, formData.password, formData.firstName, formData.lastName);
-      console.log('Signup successful');
+      const result = await signUp(formData.email, formData.password, formData.firstName, formData.lastName);
+      console.log('SignupScreen: Signup successful');
+      
       Alert.alert(
         'Registrierung erfolgreich!',
         'Dein Konto wurde erstellt. Bitte überprüfe deine E-Mails und bestätige deine E-Mail-Adresse, bevor du dich anmeldest.',
         [
           {
             text: 'OK',
-            onPress: () => router.push('/auth/login')
+            onPress: () => {
+              console.log('SignupScreen: Redirecting to login');
+              router.replace('/auth/login');
+            }
           }
         ]
       );
     } catch (error: any) {
-      console.error('Signup error:', error);
+      console.error('SignupScreen: Signup error:', error);
       let errorMessage = 'Ein unerwarteter Fehler ist aufgetreten.';
       
       if (error.message) {
@@ -71,6 +78,10 @@ export default function SignupScreen() {
           errorMessage = 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits.';
         } else if (error.message.includes('Password should be at least 6 characters')) {
           errorMessage = 'Das Passwort muss mindestens 6 Zeichen lang sein.';
+        } else if (error.message.includes('Invalid email')) {
+          errorMessage = 'Bitte gib eine gültige E-Mail-Adresse ein.';
+        } else if (error.message.includes('Signup is disabled')) {
+          errorMessage = 'Die Registrierung ist derzeit deaktiviert. Bitte kontaktiere den Administrator.';
         } else {
           errorMessage = error.message;
         }
@@ -83,10 +94,12 @@ export default function SignupScreen() {
   };
 
   const handleLogin = () => {
+    console.log('SignupScreen: Navigating to login');
     router.push('/auth/login');
   };
 
   const handleBack = () => {
+    console.log('SignupScreen: Going back');
     router.back();
   };
 
@@ -99,7 +112,7 @@ export default function SignupScreen() {
       <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 30 }}>
-          <TouchableOpacity onPress={handleBack} style={{ marginRight: 16 }}>
+          <TouchableOpacity onPress={handleBack} style={{ marginRight: 16 }} disabled={isLoading}>
             <Icon name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={[commonStyles.title, { color: colors.primary }]}>Registrieren</Text>
@@ -134,6 +147,7 @@ export default function SignupScreen() {
                 placeholder="Max"
                 placeholderTextColor={colors.textLight}
                 autoCapitalize="words"
+                editable={!isLoading}
               />
             </View>
             <View style={{ flex: 1, marginLeft: 8 }}>
@@ -145,6 +159,7 @@ export default function SignupScreen() {
                 placeholder="Mustermann"
                 placeholderTextColor={colors.textLight}
                 autoCapitalize="words"
+                editable={!isLoading}
               />
             </View>
           </View>
@@ -160,6 +175,7 @@ export default function SignupScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            editable={!isLoading}
           />
 
           {/* Phone */}
@@ -171,6 +187,7 @@ export default function SignupScreen() {
             placeholder="+43 123 456 7890"
             placeholderTextColor={colors.textLight}
             keyboardType="phone-pad"
+            editable={!isLoading}
           />
 
           {/* Skill Level */}
@@ -194,6 +211,7 @@ export default function SignupScreen() {
                     : { backgroundColor: 'transparent', borderColor: colors.border }
                 ]}
                 onPress={() => updateFormData('skillLevel', level)}
+                disabled={isLoading}
               >
                 <Text style={[
                   { fontSize: 14, fontWeight: '500' },
@@ -219,6 +237,7 @@ export default function SignupScreen() {
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               autoCorrect={false}
+              editable={!isLoading}
             />
             <TouchableOpacity
               style={{
@@ -228,6 +247,7 @@ export default function SignupScreen() {
                 padding: 4,
               }}
               onPress={() => setShowPassword(!showPassword)}
+              disabled={isLoading}
             >
               <Icon 
                 name={showPassword ? "eye-off" : "eye"} 
@@ -249,6 +269,7 @@ export default function SignupScreen() {
               secureTextEntry={!showConfirmPassword}
               autoCapitalize="none"
               autoCorrect={false}
+              editable={!isLoading}
             />
             <TouchableOpacity
               style={{
@@ -258,6 +279,7 @@ export default function SignupScreen() {
                 padding: 4,
               }}
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              disabled={isLoading}
             >
               <Icon 
                 name={showConfirmPassword ? "eye-off" : "eye"} 
@@ -286,7 +308,7 @@ export default function SignupScreen() {
         {/* Login Link */}
         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
           <Text style={commonStyles.textLight}>Bereits ein Konto? </Text>
-          <TouchableOpacity onPress={handleLogin}>
+          <TouchableOpacity onPress={handleLogin} disabled={isLoading}>
             <Text style={[commonStyles.textLight, { color: colors.primary, fontWeight: '600' }]}>
               Anmelden
             </Text>

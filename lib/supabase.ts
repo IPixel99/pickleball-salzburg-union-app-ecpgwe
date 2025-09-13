@@ -1,10 +1,17 @@
 
+import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://asugynuigbnrsynczdhe.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzdWd5bnVpZ2JucnN5bmN6ZGhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxNDQ4NzMsImV4cCI6MjA2MjcyMDg3M30.eQ1HGBxrbdaDOS2ry-YVgyh2kJ54gOZKHSjXz4xXxf8';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+});
 
 export type Database = {
   public: {

@@ -22,23 +22,37 @@ export default function LoginScreen() {
     }
 
     setIsLoading(true);
-    console.log('Login attempt with:', { email, password: '***' });
+    console.log('LoginScreen: Attempting login for:', email);
 
     try {
-      await signIn(email, password);
-      console.log('Login successful');
-      Alert.alert('Erfolg', 'Du wurdest erfolgreich angemeldet!', [
-        { text: 'OK', onPress: () => router.push('/(tabs)') }
-      ]);
+      const result = await signIn(email, password);
+      console.log('LoginScreen: Login successful');
+      
+      // Show success message and redirect
+      Alert.alert(
+        'Anmeldung erfolgreich!', 
+        'Du wurdest erfolgreich angemeldet.',
+        [
+          { 
+            text: 'OK', 
+            onPress: () => {
+              console.log('LoginScreen: Redirecting to tabs');
+              router.replace('/(tabs)');
+            }
+          }
+        ]
+      );
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('LoginScreen: Login error:', error);
       let errorMessage = 'Ein unerwarteter Fehler ist aufgetreten.';
       
       if (error.message) {
         if (error.message.includes('Invalid login credentials')) {
           errorMessage = 'Ungültige Anmeldedaten. Bitte überprüfe deine E-Mail und dein Passwort.';
         } else if (error.message.includes('Email not confirmed')) {
-          errorMessage = 'Bitte bestätige deine E-Mail-Adresse, bevor du dich anmeldest.';
+          errorMessage = 'Bitte bestätige deine E-Mail-Adresse, bevor du dich anmeldest. Überprüfe dein E-Mail-Postfach.';
+        } else if (error.message.includes('Too many requests')) {
+          errorMessage = 'Zu viele Anmeldeversuche. Bitte warte einen Moment und versuche es erneut.';
         } else {
           errorMessage = error.message;
         }
@@ -57,7 +71,7 @@ export default function LoginScreen() {
     }
 
     try {
-      console.log('Resetting password for:', email);
+      console.log('LoginScreen: Resetting password for:', email);
       await resetPassword(email);
       Alert.alert(
         'Passwort zurücksetzen',
@@ -65,16 +79,18 @@ export default function LoginScreen() {
         [{ text: 'OK' }]
       );
     } catch (error: any) {
-      console.error('Password reset error:', error);
+      console.error('LoginScreen: Password reset error:', error);
       Alert.alert('Fehler', 'Beim Zurücksetzen des Passworts ist ein Fehler aufgetreten.');
     }
   };
 
   const handleSignup = () => {
+    console.log('LoginScreen: Navigating to signup');
     router.push('/auth/signup');
   };
 
   const handleBack = () => {
+    console.log('LoginScreen: Going back');
     router.back();
   };
 
@@ -117,6 +133,7 @@ export default function LoginScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            editable={!isLoading}
           />
 
           <Text style={[commonStyles.textLight, { marginBottom: 8 }]}>Passwort</Text>
@@ -130,6 +147,7 @@ export default function LoginScreen() {
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               autoCorrect={false}
+              editable={!isLoading}
             />
             <TouchableOpacity
               style={{
@@ -139,6 +157,7 @@ export default function LoginScreen() {
                 padding: 4,
               }}
               onPress={() => setShowPassword(!showPassword)}
+              disabled={isLoading}
             >
               <Icon 
                 name={showPassword ? "eye-off" : "eye"} 
@@ -148,7 +167,11 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity onPress={handleForgotPassword} style={{ alignSelf: 'flex-end', marginTop: 8 }}>
+          <TouchableOpacity 
+            onPress={handleForgotPassword} 
+            style={{ alignSelf: 'flex-end', marginTop: 8 }}
+            disabled={isLoading}
+          >
             <Text style={[commonStyles.textLight, { color: colors.primary }]}>
               Passwort vergessen?
             </Text>
@@ -173,7 +196,7 @@ export default function LoginScreen() {
         {/* Signup Link */}
         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
           <Text style={commonStyles.textLight}>Noch kein Konto? </Text>
-          <TouchableOpacity onPress={handleSignup}>
+          <TouchableOpacity onPress={handleSignup} disabled={isLoading}>
             <Text style={[commonStyles.textLight, { color: colors.primary, fontWeight: '600' }]}>
               Registrieren
             </Text>

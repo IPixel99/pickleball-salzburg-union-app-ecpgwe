@@ -3,18 +3,28 @@ import React from 'react';
 import { Text, View, TouchableOpacity, Image } from 'react-native';
 import { commonStyles, colors, buttonStyles } from '../styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, Redirect } from 'expo-router';
+import { useAuth } from '../hooks/useAuth';
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const { user, loading } = useAuth();
+
+  console.log('WelcomeScreen: Auth state - loading:', loading, 'user:', user?.email || 'No user');
+
+  // If user is already authenticated, redirect to tabs
+  if (!loading && user) {
+    console.log('WelcomeScreen: User authenticated, redirecting to tabs');
+    return <Redirect href="/(tabs)" />;
+  }
 
   const handleGetStarted = () => {
-    console.log('Navigating to main app');
-    router.push('/(tabs)');
+    console.log('WelcomeScreen: Navigating to signup');
+    router.push('/auth/signup');
   };
 
   const handleLogin = () => {
-    console.log('Navigating to login');
+    console.log('WelcomeScreen: Navigating to login');
     router.push('/auth/login');
   };
 
@@ -44,7 +54,7 @@ export default function WelcomeScreen() {
           style={[buttonStyles.primary, { width: '100%', marginBottom: 16 }]}
           onPress={handleGetStarted}
         >
-          <Text style={commonStyles.buttonTextWhite}>Loslegen</Text>
+          <Text style={commonStyles.buttonTextWhite}>Registrieren</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

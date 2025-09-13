@@ -1,9 +1,37 @@
 
-import { Tabs } from 'expo-router';
+import React from 'react';
+import { Tabs, Redirect } from 'expo-router';
+import { Text, View, ActivityIndicator } from 'react-native';
 import Icon from '../../components/Icon';
 import { colors, commonStyles } from '../../styles/commonStyles';
+import { useAuth } from '../../hooks/useAuth';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
+  const { user, loading } = useAuth();
+
+  console.log('TabLayout: Auth state - loading:', loading, 'user:', user?.email || 'No user');
+
+  // Show loading screen while checking auth
+  if (loading) {
+    return (
+      <SafeAreaView style={[commonStyles.container, commonStyles.centerContent]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[commonStyles.text, { marginTop: 16 }]}>
+          Lade...
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Redirect to welcome screen if not authenticated
+  if (!user) {
+    console.log('TabLayout: No user found, redirecting to welcome');
+    return <Redirect href="/" />;
+  }
+
+  console.log('TabLayout: User authenticated, showing tabs');
+
   return (
     <Tabs
       screenOptions={{

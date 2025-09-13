@@ -114,6 +114,10 @@ export const commonStyles = StyleSheet.create({
     boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
     elevation: 3,
   },
+  shadow: {
+    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
+    elevation: 3,
+  },
   input: {
     borderWidth: 1,
     borderColor: colors.border,

@@ -8,7 +8,7 @@ import { supabase } from '../../lib/supabase';
 import Icon from '../../components/Icon';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { useAuth } from '../../hooks/useAuth';
-import { uploadProfileImage, deleteProfileImage } from '../../utils/imageUtils';
+import { uploadProfileImage, deleteProfileImage, validateImageUri } from '../../utils/imageUtils';
 
 interface Profile {
   id: string;
@@ -91,11 +91,20 @@ export default function EditProfileScreen() {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        allowsMultipleSelection: false,
       });
 
-      if (!result.canceled && result.assets[0]) {
-        console.log('Image selected, uploading...');
-        await handleImageUpload(result.assets[0].uri);
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        console.log('Image selected:', asset.uri);
+        
+        // Validate the image URI
+        if (!validateImageUri(asset.uri)) {
+          Alert.alert('Fehler', 'Das ausgewählte Bild ist ungültig.');
+          return;
+        }
+        
+        await handleImageUpload(asset.uri);
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -120,9 +129,17 @@ export default function EditProfileScreen() {
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets[0]) {
-        console.log('Photo taken, uploading...');
-        await handleImageUpload(result.assets[0].uri);
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        console.log('Photo taken:', asset.uri);
+        
+        // Validate the image URI
+        if (!validateImageUri(asset.uri)) {
+          Alert.alert('Fehler', 'Das aufgenommene Foto ist ungültig.');
+          return;
+        }
+        
+        await handleImageUpload(asset.uri);
       }
     } catch (error) {
       console.error('Error taking photo:', error);
@@ -131,28 +148,66 @@ export default function EditProfileScreen() {
   };
 
   const handleImageUpload = async (uri: string) => {
-    if (!user) return;
+    if (!user) {
+      Alert.alert('Fehler', 'Benutzer nicht angemeldet.');
+      return;
+    }
+
+    if (!uri) {
+      Alert.alert('Fehler', 'Kein Bild ausgewählt.');
+      return;
+    }
 
     setUploading(true);
     try {
+      console.log('Starting image upload process');
+      
       // Delete old avatar if exists
       if (avatarUrl) {
         console.log('Deleting old avatar');
-        await deleteProfileImage(avatarUrl, user.id);
+        const deleteSuccess = await deleteProfileImage(avatarUrl, user.id);
+        if (!deleteSuccess) {
+          console.warn('Failed to delete old avatar, continuing with upload');
+        }
       }
 
       // Upload new image
+      console.log('Uploading new image');
       const result = await uploadProfileImage(uri, user.id);
       
       if (result.success && result.url) {
+        console.log('Image upload successful:', result.url);
         setAvatarUrl(result.url);
         Alert.alert('Erfolg', 'Profilbild wurde erfolgreich hochgeladen!');
       } else {
-        Alert.alert('Fehler', result.error || 'Bild konnte nicht hochgeladen werden.');
+        console.error('Image upload failed:', result.error);
+        Alert.alert(
+          'Upload-Fehler', 
+          result.error || 'Bild konnte nicht hochgeladen werden.',
+          [
+            { text: 'OK', style: 'default' },
+            { 
+              text: 'Erneut versuchen', 
+              onPress: () => handleImageUpload(uri),
+              style: 'default'
+            }
+          ]
+        );
       }
     } catch (error) {
       console.error('Error in handleImageUpload:', error);
-      Alert.alert('Fehler', 'Beim Hochladen des Bildes ist ein Fehler aufgetreten.');
+      Alert.alert(
+        'Fehler', 
+        'Beim Hochladen des Bildes ist ein unerwarteter Fehler aufgetreten.',
+        [
+          { text: 'OK', style: 'default' },
+          { 
+            text: 'Erneut versuchen', 
+            onPress: () => handleImageUpload(uri),
+            style: 'default'
+          }
+        ]
+      );
     } finally {
       setUploading(false);
     }
@@ -320,6 +375,10 @@ export default function EditProfileScreen() {
                   borderRadius: 60,
                   backgroundColor: colors.background,
                 }}
+                onError={(error) => {
+                  console.error('Error loading avatar image:', error);
+                  setAvatarUrl(null);
+                }}
               />
             ) : (
               <View
@@ -365,6 +424,12 @@ export default function EditProfileScreen() {
           <Text style={[commonStyles.textLight, { textAlign: 'center' }]}>
             Tippe auf das Bild, um es zu ändern
           </Text>
+          
+          {uploading && (
+            <Text style={[commonStyles.textLight, { textAlign: 'center', marginTop: 8, color: colors.primary }]}>
+              Bild wird hochgeladen...
+            </Text>
+          )}
         </View>
 
         {/* Form */}

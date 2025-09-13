@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Icon from '../../components/Icon';
 import StorageSetup from '../../components/StorageSetup';
+import ImageUploadTest from '../../components/ImageUploadTest';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 
 export default function SettingsScreen() {
@@ -19,37 +20,33 @@ export default function SettingsScreen() {
 
   const handleNotificationToggle = (value: boolean) => {
     setNotifications(value);
-    console.log('Notifications toggled:', value);
-    // Here you would typically save this setting to your backend or local storage
+    // TODO: Implement notification settings
   };
 
   const handleEmailToggle = (value: boolean) => {
     setEmailNotifications(value);
-    console.log('Email notifications toggled:', value);
-    // Here you would typically save this setting to your backend or local storage
+    // TODO: Implement email notification settings
   };
 
   const handleDarkModeToggle = (value: boolean) => {
     setDarkMode(value);
-    console.log('Dark mode toggled:', value);
-    // Here you would typically implement dark mode theme switching
-    Alert.alert('Info', 'Dark Mode wird in einer zukünftigen Version verfügbar sein.');
+    // TODO: Implement dark mode
   };
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      'Konto löschen',
-      'Bist du sicher, dass du dein Konto löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.',
+      'Account löschen',
+      'Möchtest du deinen Account wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.',
       [
         { text: 'Abbrechen', style: 'cancel' },
         {
           text: 'Löschen',
           style: 'destructive',
           onPress: () => {
-            // Here you would implement account deletion
-            Alert.alert('Info', 'Konto-Löschung wird in einer zukünftigen Version verfügbar sein.');
-          },
-        },
+            // TODO: Implement account deletion
+            Alert.alert('Info', 'Account-Löschung ist noch nicht implementiert.');
+          }
+        }
       ]
     );
   };
@@ -79,27 +76,20 @@ export default function SettingsScreen() {
           </Text>
         </View>
 
-        {/* Storage Setup */}
+        {/* Storage Setup Section */}
         <StorageSetup />
+
+        {/* Image Upload Test Section */}
+        <ImageUploadTest />
 
         {/* Notification Settings */}
         <View style={[commonStyles.card, { marginBottom: 20 }]}>
           <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16 }]}>
             Benachrichtigungen
           </Text>
-
-          <View style={{ 
-            flexDirection: 'row', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            marginBottom: 16
-          }}>
-            <View style={{ flex: 1 }}>
-              <Text style={commonStyles.text}>Push-Benachrichtigungen</Text>
-              <Text style={[commonStyles.textLight, { fontSize: 14 }]}>
-                Erhalte Benachrichtigungen über neue Events und Nachrichten
-              </Text>
-            </View>
+          
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Text style={commonStyles.text}>Push-Benachrichtigungen</Text>
             <Switch
               value={notifications}
               onValueChange={handleNotificationToggle}
@@ -107,18 +97,9 @@ export default function SettingsScreen() {
               thumbColor={colors.white}
             />
           </View>
-
-          <View style={{ 
-            flexDirection: 'row', 
-            justifyContent: 'space-between', 
-            alignItems: 'center'
-          }}>
-            <View style={{ flex: 1 }}>
-              <Text style={commonStyles.text}>E-Mail-Benachrichtigungen</Text>
-              <Text style={[commonStyles.textLight, { fontSize: 14 }]}>
-                Erhalte wichtige Updates per E-Mail
-              </Text>
-            </View>
+          
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={commonStyles.text}>E-Mail-Benachrichtigungen</Text>
             <Switch
               value={emailNotifications}
               onValueChange={handleEmailToggle}
@@ -133,18 +114,9 @@ export default function SettingsScreen() {
           <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16 }]}>
             Darstellung
           </Text>
-
-          <View style={{ 
-            flexDirection: 'row', 
-            justifyContent: 'space-between', 
-            alignItems: 'center'
-          }}>
-            <View style={{ flex: 1 }}>
-              <Text style={commonStyles.text}>Dark Mode</Text>
-              <Text style={[commonStyles.textLight, { fontSize: 14 }]}>
-                Verwende ein dunkles Design
-              </Text>
-            </View>
+          
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={commonStyles.text}>Dunkler Modus</Text>
             <Switch
               value={darkMode}
               onValueChange={handleDarkModeToggle}
@@ -154,78 +126,25 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Privacy Settings */}
-        <View style={[commonStyles.card, { marginBottom: 20 }]}>
-          <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16 }]}>
-            Privatsphäre & Sicherheit
-          </Text>
-
-          <TouchableOpacity
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 12,
-            }}
-            onPress={() => Alert.alert('Info', 'Datenschutz-Einstellungen werden in einer zukünftigen Version verfügbar sein.')}
-          >
-            <Icon name="shield-checkmark" size={24} color={colors.primary} />
-            <Text style={[commonStyles.text, { marginLeft: 12, flex: 1 }]}>
-              Datenschutz-Einstellungen
-            </Text>
-            <Icon name="chevron-forward" size={20} color={colors.textLight} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 12,
-            }}
-            onPress={() => Alert.alert('Info', 'Sicherheits-Einstellungen werden in einer zukünftigen Version verfügbar sein.')}
-          >
-            <Icon name="lock-closed" size={24} color={colors.primary} />
-            <Text style={[commonStyles.text, { marginLeft: 12, flex: 1 }]}>
-              Sicherheit
-            </Text>
-            <Icon name="chevron-forward" size={20} color={colors.textLight} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Account Management */}
+        {/* Danger Zone */}
         <View style={[commonStyles.card, { marginBottom: 30 }]}>
-          <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16 }]}>
-            Konto-Verwaltung
+          <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16, color: '#dc3545' }]}>
+            Gefahrenbereich
           </Text>
-
+          
           <TouchableOpacity
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 12,
-              marginBottom: 12,
-            }}
-            onPress={() => Alert.alert('Info', 'Daten-Export wird in einer zukünftigen Version verfügbar sein.')}
-          >
-            <Icon name="download" size={24} color={colors.primary} />
-            <Text style={[commonStyles.text, { marginLeft: 12, flex: 1 }]}>
-              Daten exportieren
-            </Text>
-            <Icon name="chevron-forward" size={20} color={colors.textLight} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 12,
-            }}
+            style={[
+              buttonStyles.outline,
+              { 
+                width: '100%',
+                borderColor: '#dc3545',
+              }
+            ]}
             onPress={handleDeleteAccount}
           >
-            <Icon name="trash" size={24} color={colors.error} />
-            <Text style={[commonStyles.text, { marginLeft: 12, flex: 1, color: colors.error }]}>
-              Konto löschen
+            <Text style={[commonStyles.buttonText, { color: '#dc3545' }]}>
+              Account löschen
             </Text>
-            <Icon name="chevron-forward" size={20} color={colors.textLight} />
           </TouchableOpacity>
         </View>
       </ScrollView>

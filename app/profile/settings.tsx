@@ -1,54 +1,50 @@
 
 import React, { useState } from 'react';
-import { Text, View, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
+import { Text, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Icon from '../../components/Icon';
-import StorageSetup from '../../components/StorageSetup';
-import ImageUploadTest from '../../components/ImageUploadTest';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
+import { useAuth } from '../../hooks/useAuth';
+import StorageSetup from '../../components/StorageSetup';
+import StorageFunctions from '../../components/StorageFunctions';
+import ImageUploadTest from '../../components/ImageUploadTest';
+import SupabaseConnectionTest from '../../components/SupabaseConnectionTest';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const [notifications, setNotifications] = useState(true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const { user, signOut } = useAuth();
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleBack = () => {
     router.back();
   };
 
-  const handleNotificationToggle = (value: boolean) => {
-    setNotifications(value);
-    // TODO: Implement notification settings
-  };
-
-  const handleEmailToggle = (value: boolean) => {
-    setEmailNotifications(value);
-    // TODO: Implement email notification settings
-  };
-
-  const handleDarkModeToggle = (value: boolean) => {
-    setDarkMode(value);
-    // TODO: Implement dark mode
-  };
-
-  const handleDeleteAccount = () => {
+  const handleLogout = async () => {
     Alert.alert(
-      'Account löschen',
-      'Möchtest du deinen Account wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.',
+      'Abmelden',
+      'Möchtest du dich wirklich abmelden?',
       [
         { text: 'Abbrechen', style: 'cancel' },
         {
-          text: 'Löschen',
+          text: 'Abmelden',
           style: 'destructive',
-          onPress: () => {
-            // TODO: Implement account deletion
-            Alert.alert('Info', 'Account-Löschung ist noch nicht implementiert.');
+          onPress: async () => {
+            try {
+              await signOut();
+              router.replace('/auth/login');
+            } catch (error) {
+              console.error('Error signing out:', error);
+              Alert.alert('Fehler', 'Beim Abmelden ist ein Fehler aufgetreten.');
+            }
           }
         }
       ]
     );
+  };
+
+  const toggleAdvanced = () => {
+    setShowAdvanced(!showAdvanced);
   };
 
   return (
@@ -76,77 +72,159 @@ export default function SettingsScreen() {
           </Text>
         </View>
 
-        {/* Storage Setup Section */}
-        <StorageSetup />
-
-        {/* Image Upload Test Section */}
-        <ImageUploadTest />
-
-        {/* Notification Settings */}
-        <View style={[commonStyles.card, { marginBottom: 20 }]}>
-          <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16 }]}>
-            Benachrichtigungen
-          </Text>
-          
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <Text style={commonStyles.text}>Push-Benachrichtigungen</Text>
-            <Switch
-              value={notifications}
-              onValueChange={handleNotificationToggle}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.white}
-            />
-          </View>
-          
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={commonStyles.text}>E-Mail-Benachrichtigungen</Text>
-            <Switch
-              value={emailNotifications}
-              onValueChange={handleEmailToggle}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.white}
-            />
-          </View>
-        </View>
-
-        {/* Appearance Settings */}
-        <View style={[commonStyles.card, { marginBottom: 20 }]}>
-          <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16 }]}>
-            Darstellung
-          </Text>
-          
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={commonStyles.text}>Dunkler Modus</Text>
-            <Switch
-              value={darkMode}
-              onValueChange={handleDarkModeToggle}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.white}
-            />
-          </View>
-        </View>
-
-        {/* Danger Zone */}
-        <View style={[commonStyles.card, { marginBottom: 30 }]}>
-          <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16, color: '#dc3545' }]}>
-            Gefahrenbereich
-          </Text>
-          
-          <TouchableOpacity
-            style={[
-              buttonStyles.outline,
-              { 
-                width: '100%',
-                borderColor: '#dc3545',
-              }
-            ]}
-            onPress={handleDeleteAccount}
-          >
-            <Text style={[commonStyles.buttonText, { color: '#dc3545' }]}>
-              Account löschen
+        {/* User Info */}
+        {user && (
+          <View style={[commonStyles.card, { marginBottom: 20 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Icon name="person" size={24} color={colors.primary} />
+              <Text style={[commonStyles.text, { fontWeight: '600', marginLeft: 12 }]}>
+                Benutzer-Info
+              </Text>
+            </View>
+            <Text style={[commonStyles.textLight, { marginBottom: 4 }]}>
+              E-Mail: {user.email}
             </Text>
+            <Text style={[commonStyles.textLight]}>
+              ID: {user.id}
+            </Text>
+          </View>
+        )}
+
+        {/* Storage Setup */}
+        <StorageSetup onComplete={() => {
+          Alert.alert('Setup abgeschlossen', 'Der Avatar-Speicher ist jetzt einsatzbereit!');
+        }} />
+
+        {/* Advanced Settings Toggle */}
+        <TouchableOpacity
+          style={[commonStyles.card, { marginBottom: 20 }]}
+          onPress={toggleAdvanced}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Icon name="settings" size={24} color={colors.primary} />
+              <Text style={[commonStyles.text, { fontWeight: '600', marginLeft: 12 }]}>
+                Erweiterte Einstellungen
+              </Text>
+            </View>
+            <Icon 
+              name={showAdvanced ? "chevron-up" : "chevron-down"} 
+              size={20} 
+              color={colors.textLight} 
+            />
+          </View>
+        </TouchableOpacity>
+
+        {/* Advanced Settings Content */}
+        {showAdvanced && (
+          <View style={{ marginBottom: 20 }}>
+            {/* Storage Functions */}
+            <StorageFunctions />
+
+            {/* Connection Test */}
+            <SupabaseConnectionTest />
+
+            {/* Image Upload Test */}
+            <ImageUploadTest />
+
+            {/* Debug Info */}
+            <View style={[commonStyles.card, { marginBottom: 20 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <Icon name="bug" size={24} color={colors.primary} />
+                <Text style={[commonStyles.text, { fontWeight: '600', marginLeft: 12 }]}>
+                  Debug-Informationen
+                </Text>
+              </View>
+              <Text style={[commonStyles.textLight, { fontSize: 12, lineHeight: 16 }]}>
+                Supabase URL: https://asugynuigbnrsynczdhe.supabase.co{'\n'}
+                Project ID: asugynuigbnrsynczdhe{'\n'}
+                Storage Bucket: avatars{'\n'}
+                Platform: {require('react-native').Platform.OS}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Settings Options */}
+        <View style={[commonStyles.card, { marginBottom: 20 }]}>
+          <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16 }]}>
+            App-Einstellungen
+          </Text>
+
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingVertical: 12,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.border,
+            }}
+            onPress={() => router.push('/profile/help')}
+          >
+            <Icon name="help-circle" size={20} color={colors.textLight} />
+            <Text style={[commonStyles.text, { marginLeft: 12, flex: 1 }]}>
+              Hilfe & Support
+            </Text>
+            <Icon name="chevron-forward" size={16} color={colors.textLight} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingVertical: 12,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.border,
+            }}
+            onPress={() => router.push('/profile/about')}
+          >
+            <Icon name="information-circle" size={20} color={colors.textLight} />
+            <Text style={[commonStyles.text, { marginLeft: 12, flex: 1 }]}>
+              Über die App
+            </Text>
+            <Icon name="chevron-forward" size={16} color={colors.textLight} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingVertical: 12,
+            }}
+            onPress={() => {
+              Alert.alert(
+                'App-Version',
+                'Pickleball Salzburg Union\nVersion 1.0.0\n\nEntwickelt mit React Native & Supabase',
+                [{ text: 'OK', style: 'default' }]
+              );
+            }}
+          >
+            <Icon name="code" size={20} color={colors.textLight} />
+            <Text style={[commonStyles.text, { marginLeft: 12, flex: 1 }]}>
+              App-Version
+            </Text>
+            <Text style={[commonStyles.textLight]}>1.0.0</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Logout Button */}
+        <TouchableOpacity
+          style={[
+            buttonStyles.outline,
+            { 
+              borderColor: colors.error,
+              marginBottom: 40
+            }
+          ]}
+          onPress={handleLogout}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="log-out" size={18} color={colors.error} />
+            <Text style={[commonStyles.buttonText, { color: colors.error, marginLeft: 8 }]}>
+              Abmelden
+            </Text>
+          </View>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

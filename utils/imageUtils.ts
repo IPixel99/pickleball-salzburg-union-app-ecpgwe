@@ -22,6 +22,7 @@ const uriToBlob = async (uri: string): Promise<Blob> => {
       return await response.blob();
     } else {
       // For React Native, we need to handle this differently
+      // First, try to read the file as a blob
       const response = await fetch(uri);
       if (!response.ok) {
         throw new Error(`Failed to fetch image: ${response.status}`);
@@ -31,6 +32,16 @@ const uriToBlob = async (uri: string): Promise<Blob> => {
       const blob = await response.blob();
       console.log('Blob created successfully, size:', blob.size, 'type:', blob.type);
       
+      // If blob type is not set, try to determine it from the URI
+      if (!blob.type || blob.type === 'application/octet-stream') {
+        const ext = getFileExtension(uri);
+        const mimeType = getMimeTypeFromExtension(ext);
+        console.log('Setting blob type to:', mimeType);
+        
+        // Create a new blob with the correct MIME type
+        return new Blob([blob], { type: mimeType });
+      }
+      
       return blob;
     }
   } catch (error) {
@@ -39,17 +50,39 @@ const uriToBlob = async (uri: string): Promise<Blob> => {
   }
 };
 
+// Helper function to get MIME type from file extension
+const getMimeTypeFromExtension = (ext: string): string => {
+  const mimeTypes: { [key: string]: string } = {
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'webp': 'image/webp',
+    'gif': 'image/gif'
+  };
+  
+  return mimeTypes[ext.toLowerCase()] || 'image/jpeg';
+};
+
 // Helper function to get file extension from URI
 const getFileExtension = (uri: string): string => {
   try {
     // Try to get extension from URI
     const uriParts = uri.split('.');
     if (uriParts.length > 1) {
-      const ext = uriParts[uriParts.length - 1].toLowerCase();
+      let ext = uriParts[uriParts.length - 1].toLowerCase();
+      
+      // Remove query parameters if present
+      ext = ext.split('?')[0];
+      
       // Validate common image extensions
       if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
         return ext;
       }
+    }
+    
+    // Try to determine from URI pattern (React Native image picker)
+    if (uri.includes('ImagePicker') || uri.includes('Camera')) {
+      return 'jpg'; // Default for camera/picker images
     }
     
     // Default to jpg if we can't determine the extension
@@ -57,6 +90,23 @@ const getFileExtension = (uri: string): string => {
   } catch (error) {
     console.error('Error getting file extension:', error);
     return 'jpg';
+  }
+};
+
+// Helper function to create a file from URI (alternative approach)
+const uriToFile = async (uri: string, fileName: string): Promise<File | Blob> => {
+  try {
+    if (Platform.OS === 'web') {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      return new File([blob], fileName, { type: blob.type });
+    } else {
+      // For React Native, return blob
+      return await uriToBlob(uri);
+    }
+  } catch (error) {
+    console.error('Error creating file from URI:', error);
+    throw error;
   }
 };
 
@@ -72,6 +122,14 @@ export const uploadProfileImage = async (
       return {
         success: false,
         error: 'Ungültige Parameter für Bildupload'
+      };
+    }
+
+    // Validate URI format
+    if (!validateImageUri(uri)) {
+      return {
+        success: false,
+        error: 'Ungültige Bild-URI'
       };
     }
 
@@ -118,7 +176,7 @@ export const uploadProfileImage = async (
       .upload(fileName, blob, {
         cacheControl: '3600',
         upsert: true,
-        contentType: blob.type || `image/${fileExt}`,
+        contentType: blob.type || getMimeTypeFromExtension(fileExt),
       });
 
     if (error) {
@@ -128,17 +186,22 @@ export const uploadProfileImage = async (
       if (error.message.includes('Bucket not found')) {
         return {
           success: false,
-          error: 'Avatar-Speicher ist nicht eingerichtet. Bitte kontaktiere den Administrator.'
+          error: 'Avatar-Speicher ist nicht eingerichtet. Bitte gehe zu den Einstellungen und richte den Speicher ein.'
         };
-      } else if (error.message.includes('Policy')) {
+      } else if (error.message.includes('Policy') || error.message.includes('permission')) {
         return {
           success: false,
-          error: 'Keine Berechtigung zum Hochladen von Bildern.'
+          error: 'Keine Berechtigung zum Hochladen von Bildern. Bitte überprüfe die Storage-Richtlinien.'
         };
-      } else if (error.message.includes('size')) {
+      } else if (error.message.includes('size') || error.message.includes('limit')) {
         return {
           success: false,
-          error: 'Das Bild ist zu groß.'
+          error: 'Das Bild ist zu groß. Maximale Größe: 5MB'
+        };
+      } else if (error.message.includes('mime') || error.message.includes('type')) {
+        return {
+          success: false,
+          error: 'Ungültiger Dateityp. Nur JPEG, PNG, WebP und GIF sind erlaubt.'
         };
       } else {
         return {
@@ -246,17 +309,66 @@ export const validateImageUri = (uri: string): boolean => {
   
   // Check if it's a valid URI format
   try {
-    const url = new URL(uri);
-    return true;
-  } catch {
+    // For web URLs
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      new URL(uri);
+      return true;
+    }
+    
     // For React Native file URIs
-    return uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('ph://');
+    if (uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('ph://')) {
+      return true;
+    }
+    
+    // For data URIs
+    if (uri.startsWith('data:image/')) {
+      return true;
+    }
+    
+    return false;
+  } catch {
+    return false;
   }
 };
 
 // Helper function to compress image if needed (placeholder for future implementation)
 export const compressImage = async (uri: string, quality: number = 0.8): Promise<string> => {
   // For now, just return the original URI
-  // In the future, we could implement image compression here
+  // In the future, we could implement image compression here using expo-image-manipulator
+  return uri;
+};
+
+// Helper function to get image dimensions
+export const getImageDimensions = async (uri: string): Promise<{ width: number; height: number } | null> => {
+  try {
+    return new Promise((resolve) => {
+      if (Platform.OS === 'web') {
+        const img = new Image();
+        img.onload = () => {
+          resolve({ width: img.width, height: img.height });
+        };
+        img.onerror = () => {
+          resolve(null);
+        };
+        img.src = uri;
+      } else {
+        // For React Native, we would need expo-image-manipulator or similar
+        resolve(null);
+      }
+    });
+  } catch (error) {
+    console.error('Error getting image dimensions:', error);
+    return null;
+  }
+};
+
+// Helper function to resize image (placeholder)
+export const resizeImage = async (
+  uri: string, 
+  maxWidth: number = 800, 
+  maxHeight: number = 800
+): Promise<string> => {
+  // For now, just return the original URI
+  // In the future, we could implement image resizing here using expo-image-manipulator
   return uri;
 };

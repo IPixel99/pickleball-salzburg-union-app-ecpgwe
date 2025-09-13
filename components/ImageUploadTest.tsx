@@ -4,177 +4,246 @@ import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Image } from 'r
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../lib/supabase';
 import { commonStyles, colors, buttonStyles } from '../styles/commonStyles';
+import { uploadProfileImage, validateImageUri } from '../utils/imageUtils';
 import { useAuth } from '../hooks/useAuth';
+import Icon from './Icon';
 
 export default function ImageUploadTest() {
   const { user } = useAuth();
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<string>('');
-  const [testImageUrl, setTestImageUrl] = useState<string>('');
+  const [testImageUri, setTestImageUri] = useState<string | null>(null);
+  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
 
-  const runImageUploadTest = async () => {
-    if (!user) {
-      Alert.alert('Fehler', 'Benutzer nicht angemeldet');
-      return;
-    }
-
-    setTesting(true);
-    setTestResult('');
-    setTestImageUrl('');
-
+  const selectTestImage = async () => {
     try {
-      console.log('=== IMAGE UPLOAD TEST START ===');
+      console.log('Selecting test image...');
       
-      // Step 1: Request permissions
-      console.log('1. Requesting permissions...');
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        setTestResult('❌ Berechtigung verweigert');
+        Alert.alert('Berechtigung erforderlich', 'Wir benötigen Zugriff auf deine Fotos für den Test.');
         return;
       }
-      console.log('✅ Permissions granted');
 
-      // Step 2: Pick image
-      console.log('2. Opening image picker...');
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        allowsMultipleSelection: false,
       });
 
-      if (result.canceled || !result.assets || !result.assets[0]) {
-        setTestResult('❌ Kein Bild ausgewählt');
-        return;
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        console.log('Test image selected:', asset.uri);
+        setTestImageUri(asset.uri);
+        setUploadedUrl(null);
       }
-
-      const imageUri = result.assets[0].uri;
-      console.log('✅ Image selected:', imageUri);
-
-      // Step 3: Convert to blob
-      console.log('3. Converting to blob...');
-      const response = await fetch(imageUri);
-      if (!response.ok) {
-        setTestResult(`❌ Fetch failed: ${response.status}`);
-        return;
-      }
-
-      const blob = await response.blob();
-      console.log('✅ Blob created:', blob.size, 'bytes, type:', blob.type);
-
-      if (blob.size === 0) {
-        setTestResult('❌ Blob ist leer');
-        return;
-      }
-
-      // Step 4: Test storage upload
-      console.log('4. Testing storage upload...');
-      const fileName = `test/${user.id}/test_${Date.now()}.jpg`;
-      
-      const { data, error } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, blob, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType: blob.type || 'image/jpeg',
-        });
-
-      if (error) {
-        console.error('❌ Upload error:', error);
-        setTestResult(`❌ Upload-Fehler: ${error.message}`);
-        return;
-      }
-
-      console.log('✅ Upload successful:', data);
-
-      // Step 5: Get public URL
-      console.log('5. Getting public URL...');
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName);
-
-      console.log('✅ Public URL:', publicUrl);
-      setTestImageUrl(publicUrl);
-
-      // Step 6: Clean up test file
-      console.log('6. Cleaning up test file...');
-      await supabase.storage
-        .from('avatars')
-        .remove([fileName]);
-
-      console.log('✅ Test completed successfully');
-      setTestResult('✅ Test erfolgreich! Bildupload funktioniert.');
-
-      console.log('=== IMAGE UPLOAD TEST END ===');
-
     } catch (error) {
-      console.error('❌ Test error:', error);
-      setTestResult(`❌ Test-Fehler: ${error}`);
+      console.error('Error selecting test image:', error);
+      Alert.alert('Fehler', 'Beim Auswählen des Testbildes ist ein Fehler aufgetreten.');
+    }
+  };
+
+  const testImageUpload = async () => {
+    if (!user) {
+      Alert.alert('Fehler', 'Du musst angemeldet sein, um den Upload zu testen.');
+      return;
+    }
+
+    if (!testImageUri) {
+      Alert.alert('Fehler', 'Bitte wähle zuerst ein Testbild aus.');
+      return;
+    }
+
+    setTesting(true);
+    try {
+      console.log('Testing image upload...');
+      console.log('Test image URI:', testImageUri);
+      console.log('User ID:', user.id);
+
+      // Validate URI first
+      if (!validateImageUri(testImageUri)) {
+        Alert.alert('Fehler', 'Die ausgewählte Bild-URI ist ungültig.');
+        return;
+      }
+
+      // Test the upload
+      const result = await uploadProfileImage(testImageUri, user.id);
+      
+      if (result.success && result.url) {
+        console.log('Test upload successful:', result.url);
+        setUploadedUrl(result.url);
+        Alert.alert(
+          'Upload erfolgreich!',
+          'Das Testbild wurde erfolgreich hochgeladen. Du kannst es unten sehen.',
+          [{ text: 'OK', style: 'default' }]
+        );
+      } else {
+        console.error('Test upload failed:', result.error);
+        Alert.alert(
+          'Upload fehlgeschlagen',
+          `Fehler beim Hochladen des Testbildes:\n\n${result.error}`,
+          [{ text: 'OK', style: 'default' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error in testImageUpload:', error);
+      Alert.alert(
+        'Unerwarteter Fehler',
+        'Beim Testen des Bildupload ist ein unerwarteter Fehler aufgetreten.',
+        [{ text: 'OK', style: 'default' }]
+      );
     } finally {
       setTesting(false);
     }
   };
 
+  const clearTest = () => {
+    setTestImageUri(null);
+    setUploadedUrl(null);
+  };
+
+  const showImageInfo = () => {
+    if (!testImageUri) return;
+
+    Alert.alert(
+      'Bild-Informationen',
+      `URI: ${testImageUri}\n\nValidierung: ${validateImageUri(testImageUri) ? 'Gültig' : 'Ungültig'}`,
+      [{ text: 'OK', style: 'default' }]
+    );
+  };
+
   return (
     <View style={[commonStyles.card, { marginBottom: 20 }]}>
-      <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
-        Bildupload-Test
-      </Text>
-      <Text style={[commonStyles.textLight, { marginBottom: 16 }]}>
-        Teste den kompletten Bildupload-Prozess um Probleme zu identifizieren.
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <Icon name="image" size={24} color={colors.primary} />
+        <Text style={[commonStyles.text, { fontWeight: '600', marginLeft: 12 }]}>
+          Bildupload-Test
+        </Text>
+      </View>
       
-      <TouchableOpacity
-        style={[
-          buttonStyles.primary,
-          { width: '100%', marginBottom: 16 },
-          testing && { opacity: 0.7 }
-        ]}
-        onPress={runImageUploadTest}
-        disabled={testing || !user}
-      >
-        {testing ? (
-          <ActivityIndicator size="small" color={colors.white} />
-        ) : (
-          <Text style={commonStyles.buttonTextWhite}>
-            Test starten
-          </Text>
-        )}
-      </TouchableOpacity>
+      <Text style={[commonStyles.textLight, { marginBottom: 16, lineHeight: 20 }]}>
+        Teste den Bildupload-Prozess mit einem echten Bild.
+      </Text>
 
-      {testResult && (
-        <View style={{ 
-          padding: 12, 
-          backgroundColor: testResult.includes('✅') ? '#e8f5e8' : '#ffeaea',
-          borderRadius: 8,
-          marginBottom: 12
-        }}>
-          <Text style={{ 
-            color: testResult.includes('✅') ? '#2d5a2d' : '#8b0000',
-            fontSize: 14
-          }}>
-            {testResult}
+      {/* Test Image Preview */}
+      {testImageUri && (
+        <View style={{ alignItems: 'center', marginBottom: 16 }}>
+          <Text style={[commonStyles.text, { marginBottom: 8, fontWeight: '600' }]}>
+            Ausgewähltes Testbild:
+          </Text>
+          <TouchableOpacity onPress={showImageInfo}>
+            <Image
+              source={{ uri: testImageUri }}
+              style={{
+                width: 100,
+                height: 100,
+                borderRadius: 50,
+                backgroundColor: colors.background,
+                marginBottom: 8,
+              }}
+              onError={(error) => {
+                console.error('Error loading test image:', error);
+                Alert.alert('Fehler', 'Das Testbild konnte nicht geladen werden.');
+              }}
+            />
+          </TouchableOpacity>
+          <Text style={[commonStyles.textLight, { fontSize: 12, textAlign: 'center' }]}>
+            Tippe auf das Bild für Details
           </Text>
         </View>
       )}
 
-      {testImageUrl && (
-        <View style={{ alignItems: 'center' }}>
-          <Text style={[commonStyles.textLight, { marginBottom: 8 }]}>
-            Test-Bild:
+      {/* Uploaded Image Preview */}
+      {uploadedUrl && (
+        <View style={{ alignItems: 'center', marginBottom: 16 }}>
+          <Text style={[commonStyles.text, { marginBottom: 8, fontWeight: '600', color: colors.success }]}>
+            Hochgeladenes Bild:
           </Text>
           <Image
-            source={{ uri: testImageUrl }}
+            source={{ uri: uploadedUrl }}
             style={{
               width: 100,
               height: 100,
-              borderRadius: 8,
+              borderRadius: 50,
               backgroundColor: colors.background,
+              marginBottom: 8,
             }}
             onError={(error) => {
-              console.error('Error loading test image:', error);
+              console.error('Error loading uploaded image:', error);
+              setUploadedUrl(null);
             }}
           />
+          <Text style={[commonStyles.textLight, { fontSize: 12, textAlign: 'center' }]}>
+            Upload erfolgreich!
+          </Text>
+        </View>
+      )}
+      
+      <View style={{ gap: 12 }}>
+        <TouchableOpacity
+          style={[buttonStyles.outline]}
+          onPress={selectTestImage}
+          disabled={testing}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="image" size={16} color={colors.primary} />
+            <Text style={[commonStyles.buttonText, { color: colors.primary, marginLeft: 8 }]}>
+              Testbild auswählen
+            </Text>
+          </View>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[
+            buttonStyles.primary,
+            (!testImageUri || testing) && { opacity: 0.7 }
+          ]}
+          onPress={testImageUpload}
+          disabled={!testImageUri || testing}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+            {testing ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <>
+                <Icon name="cloud-upload" size={16} color={colors.white} />
+                <Text style={[commonStyles.buttonTextWhite, { marginLeft: 8 }]}>
+                  Upload testen
+                </Text>
+              </>
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {(testImageUri || uploadedUrl) && (
+          <TouchableOpacity
+            style={[buttonStyles.outline, { borderColor: colors.error }]}
+            onPress={clearTest}
+            disabled={testing}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="trash" size={16} color={colors.error} />
+              <Text style={[commonStyles.buttonText, { color: colors.error, marginLeft: 8 }]}>
+                Test zurücksetzen
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {!user && (
+        <View style={{ 
+          marginTop: 16, 
+          padding: 12, 
+          backgroundColor: colors.warning + '20', 
+          borderRadius: 8,
+          borderLeftWidth: 4,
+          borderLeftColor: colors.warning
+        }}>
+          <Text style={[commonStyles.textLight, { fontSize: 12, lineHeight: 16, color: colors.warning }]}>
+            ⚠️ Du musst angemeldet sein, um den Bildupload zu testen.
+          </Text>
         </View>
       )}
     </View>

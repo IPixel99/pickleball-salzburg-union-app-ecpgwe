@@ -1,42 +1,38 @@
 
 import React, { useState } from 'react';
-import { Text, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { useAuth } from '../../hooks/useAuth';
+import Icon from '../../components/Icon';
+import { Text, View, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../hooks/useAuth';
-import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
-import Icon from '../../components/Icon';
-import StorageSetup from '../../components/StorageSetup';
-import ImageUploadTest from '../../components/ImageUploadTest';
-import SupabaseConnectionTest from '../../components/SupabaseConnectionTest';
-import StorageFunctions from '../../components/StorageFunctions';
-import StorageConnectionTest from '../../components/StorageConnectionTest';
+import { commonStyles, colors } from '../../styles/commonStyles';
 
 export default function SettingsScreen() {
+  const { signOut } = useAuth();
   const router = useRouter();
-  const { user, signOut } = useAuth();
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [notifications, setNotifications] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
 
   const handleBack = () => {
     router.back();
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     Alert.alert(
       'Abmelden',
       'Möchtest du dich wirklich abmelden?',
       [
         { text: 'Abbrechen', style: 'cancel' },
-        {
-          text: 'Abmelden',
+        { 
+          text: 'Abmelden', 
           style: 'destructive',
           onPress: async () => {
             try {
               await signOut();
-              router.replace('/');
+              router.replace('/auth/login');
             } catch (error) {
               console.error('Error signing out:', error);
-              Alert.alert('Fehler', 'Beim Abmelden ist ein Fehler aufgetreten.');
+              Alert.alert('Fehler', 'Fehler beim Abmelden');
             }
           }
         }
@@ -44,101 +40,180 @@ export default function SettingsScreen() {
     );
   };
 
-  const toggleAdvanced = () => {
-    setShowAdvanced(!showAdvanced);
+  const handleTestAvatar = () => {
+    router.push('/test-avatar');
   };
+
+  const handleTestSupabase = () => {
+    router.push('/test-supabase');
+  };
+
+  const settingsOptions = [
+    {
+      title: 'Benachrichtigungen',
+      subtitle: 'Push-Benachrichtigungen für Events und News',
+      icon: 'bell',
+      type: 'switch',
+      value: notifications,
+      onToggle: setNotifications,
+    },
+    {
+      title: 'Dunkler Modus',
+      subtitle: 'Dunkles Design verwenden',
+      icon: 'moon',
+      type: 'switch',
+      value: darkMode,
+      onToggle: setDarkMode,
+    },
+    {
+      title: 'Avatar Test',
+      subtitle: 'Teste die Avatar-Upload-Funktionalität',
+      icon: 'camera',
+      type: 'action',
+      onPress: handleTestAvatar,
+    },
+    {
+      title: 'Supabase Test',
+      subtitle: 'Teste die Datenbankverbindung',
+      icon: 'database',
+      type: 'action',
+      onPress: handleTestSupabase,
+    },
+    {
+      title: 'Datenschutz',
+      subtitle: 'Datenschutzrichtlinien und Einstellungen',
+      icon: 'shield',
+      type: 'action',
+      onPress: () => Alert.alert('Info', 'Datenschutzeinstellungen werden bald verfügbar sein'),
+    },
+    {
+      title: 'Über die App',
+      subtitle: 'Version und Informationen',
+      icon: 'info',
+      type: 'action',
+      onPress: () => router.push('/profile/about'),
+    },
+    {
+      title: 'Hilfe & Support',
+      subtitle: 'Häufige Fragen und Kontakt',
+      icon: 'help-circle',
+      type: 'action',
+      onPress: () => router.push('/profile/help'),
+    },
+  ];
 
   return (
     <SafeAreaView style={commonStyles.container}>
+      <View style={commonStyles.header}>
+        <TouchableOpacity onPress={handleBack} style={commonStyles.backButton}>
+          <Icon name="arrow-left" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={commonStyles.headerTitle}>Einstellungen</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
       <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
-        {/* Header with Back Button */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 30 }}>
+        <View style={commonStyles.card}>
+          <Text style={[commonStyles.subtitle, { marginBottom: 20 }]}>
+            App-Einstellungen
+          </Text>
+
+          {settingsOptions.map((option, index) => (
+            <TouchableOpacity
+              key={index}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 15,
+                borderBottomWidth: index < settingsOptions.length - 1 ? 1 : 0,
+                borderBottomColor: colors.border,
+              }}
+              onPress={option.type === 'action' ? option.onPress : undefined}
+              disabled={option.type === 'switch'}
+            >
+              <View style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: colors.primary + '20',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 15,
+              }}>
+                <Icon name={option.icon} size={20} color={colors.primary} />
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                  {option.title}
+                </Text>
+                <Text style={[commonStyles.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                  {option.subtitle}
+                </Text>
+              </View>
+
+              {option.type === 'switch' ? (
+                <Switch
+                  value={option.value}
+                  onValueChange={option.onToggle}
+                  trackColor={{ false: colors.border, true: colors.primary + '40' }}
+                  thumbColor={option.value ? colors.primary : colors.textSecondary}
+                />
+              ) : (
+                <Icon name="chevron-right" size={20} color={colors.textSecondary} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Account Actions */}
+        <View style={[commonStyles.card, { marginTop: 20 }]}>
+          <Text style={[commonStyles.subtitle, { marginBottom: 20 }]}>
+            Account
+          </Text>
+
           <TouchableOpacity
-            onPress={handleBack}
             style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingVertical: 15,
+            }}
+            onPress={handleLogout}
+          >
+            <View style={{
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: colors.white,
-              alignItems: 'center',
+              backgroundColor: colors.error + '20',
               justifyContent: 'center',
-              marginRight: 16,
-              ...commonStyles.shadow,
-            }}
-          >
-            <Icon name="arrow-back" size={20} color={colors.text} />
+              alignItems: 'center',
+              marginRight: 15,
+            }}>
+              <Icon name="log-out" size={20} color={colors.error} />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={[commonStyles.text, { fontWeight: '600', color: colors.error }]}>
+                Abmelden
+              </Text>
+              <Text style={[commonStyles.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                Von deinem Account abmelden
+              </Text>
+            </View>
+
+            <Icon name="chevron-right" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
-          <Text style={[commonStyles.title, { color: colors.primary, flex: 1 }]}>
-            Einstellungen
-          </Text>
         </View>
 
-        {/* User Info */}
-        {user && (
-          <View style={[commonStyles.card, { marginBottom: 20 }]}>
-            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
-              Angemeldet als
-            </Text>
-            <Text style={[commonStyles.textLight]}>
-              {user.email}
-            </Text>
-          </View>
-        )}
-
-        {/* Storage Connection Test */}
-        <StorageConnectionTest />
-
-        {/* Advanced Settings Toggle */}
-        <TouchableOpacity
-          style={[buttonStyles.secondary, { marginBottom: 20 }]}
-          onPress={toggleAdvanced}
-        >
-          <Icon 
-            name={showAdvanced ? "chevron-up" : "chevron-down"} 
-            size={16} 
-            color={colors.primary} 
-          />
-          <Text style={[commonStyles.buttonText, { marginLeft: 8 }]}>
-            {showAdvanced ? 'Erweiterte Einstellungen ausblenden' : 'Erweiterte Einstellungen anzeigen'}
+        {/* Version Info */}
+        <View style={[commonStyles.card, { marginTop: 20, marginBottom: 40 }]}>
+          <Text style={[commonStyles.caption, { textAlign: 'center', color: colors.textSecondary }]}>
+            Pickleball Salzburg Union
           </Text>
-        </TouchableOpacity>
-
-        {/* Advanced Settings */}
-        {showAdvanced && (
-          <View>
-            {/* Supabase Connection Test */}
-            <SupabaseConnectionTest />
-
-            {/* Storage Setup */}
-            <StorageSetup />
-
-            {/* Image Upload Test */}
-            <ImageUploadTest />
-
-            {/* Storage Functions */}
-            <StorageFunctions />
-          </View>
-        )}
-
-        {/* Logout Button */}
-        {user && (
-          <TouchableOpacity
-            style={[
-              buttonStyles.primary,
-              { 
-                backgroundColor: colors.error,
-                marginTop: 20,
-                marginBottom: 40
-              }
-            ]}
-            onPress={handleLogout}
-          >
-            <Icon name="log-out" size={16} color={colors.white} />
-            <Text style={[commonStyles.buttonTextWhite, { marginLeft: 8 }]}>
-              Abmelden
-            </Text>
-          </TouchableOpacity>
-        )}
+          <Text style={[commonStyles.caption, { textAlign: 'center', color: colors.textSecondary, marginTop: 5 }]}>
+            Version 1.0.0
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

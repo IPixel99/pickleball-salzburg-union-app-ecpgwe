@@ -115,11 +115,14 @@ export const uploadProfileImage = async (
   userId: string
 ): Promise<ImageUploadResult> => {
   try {
-    console.log('Starting profile image upload for user:', userId);
+    console.log('=== AVATAR UPLOAD START ===');
+    console.log('User ID:', userId);
     console.log('Image URI:', uri);
-    console.log('Using Supabase URL:', supabaseUrl);
+    console.log('Supabase URL:', supabaseUrl);
+    console.log('Target bucket: avatars');
     
     if (!uri || !userId) {
+      console.error('Missing required parameters');
       return {
         success: false,
         error: 'Ungültige Parameter für Bildupload'
@@ -128,6 +131,7 @@ export const uploadProfileImage = async (
 
     // Validate URI format
     if (!validateImageUri(uri)) {
+      console.error('Invalid URI format');
       return {
         success: false,
         error: 'Ungültige Bild-URI'
@@ -137,7 +141,12 @@ export const uploadProfileImage = async (
     // Convert image to blob
     let blob: Blob;
     try {
+      console.log('Converting URI to blob...');
       blob = await uriToBlob(uri);
+      console.log('Blob conversion successful:', {
+        size: blob.size,
+        type: blob.type
+      });
     } catch (error) {
       console.error('Blob conversion failed:', error);
       return {
@@ -148,6 +157,7 @@ export const uploadProfileImage = async (
 
     // Validate blob
     if (!blob || blob.size === 0) {
+      console.error('Invalid blob');
       return {
         success: false,
         error: 'Das Bild ist leer oder ungültig'
@@ -157,6 +167,7 @@ export const uploadProfileImage = async (
     // Check file size (5MB limit)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (blob.size > maxSize) {
+      console.error('File too large:', blob.size);
       return {
         success: false,
         error: 'Das Bild ist zu groß. Maximale Größe: 5MB'
@@ -168,10 +179,15 @@ export const uploadProfileImage = async (
     const timestamp = Date.now();
     const fileName = `${userId}/avatar_${timestamp}.${fileExt}`;
     
-    console.log('Uploading to storage with filename:', fileName);
-    console.log('Blob size:', blob.size, 'type:', blob.type);
+    console.log('Upload details:', {
+      fileName,
+      blobSize: blob.size,
+      blobType: blob.type,
+      bucket: 'avatars'
+    });
     
-    // Upload to Supabase storage
+    // Upload to Supabase storage - using the "avatars" bucket
+    console.log('Starting upload to avatars bucket...');
     const { data, error } = await supabase.storage
       .from('avatars')
       .upload(fileName, blob, {
@@ -182,12 +198,17 @@ export const uploadProfileImage = async (
 
     if (error) {
       console.error('Storage upload error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        statusCode: error.statusCode,
+        error: error.error
+      });
       
       // Handle specific error cases
       if (error.message.includes('Bucket not found')) {
         return {
           success: false,
-          error: 'Avatar-Speicher ist nicht eingerichtet. Bitte gehe zu den Einstellungen und richte den Speicher ein.'
+          error: 'Avatar-Speicher (avatars) ist nicht eingerichtet. Bucket nicht gefunden.'
         };
       } else if (error.message.includes('Policy') || error.message.includes('permission')) {
         return {
@@ -213,6 +234,7 @@ export const uploadProfileImage = async (
     }
 
     if (!data) {
+      console.error('No data returned from upload');
       return {
         success: false,
         error: 'Upload fehlgeschlagen - keine Daten erhalten'
@@ -221,11 +243,12 @@ export const uploadProfileImage = async (
 
     console.log('Image uploaded successfully:', data);
 
-    // Get public URL using the correct format
+    // Get public URL using the correct format for the avatars bucket
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/avatars/${fileName}`;
     console.log('Public URL generated:', publicUrl);
 
     // Update the user's profile with the new avatar URL
+    console.log('Updating profile with new avatar URL...');
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ 
@@ -239,14 +262,16 @@ export const uploadProfileImage = async (
       // Don't fail the upload, just log the error
       console.warn('Avatar uploaded but profile not updated:', profileError.message);
     } else {
-      console.log('Profile updated with new avatar URL');
+      console.log('Profile updated with new avatar URL successfully');
     }
 
+    console.log('=== AVATAR UPLOAD SUCCESS ===');
     return {
       success: true,
       url: publicUrl
     };
   } catch (error) {
+    console.error('=== AVATAR UPLOAD FAILED ===');
     console.error('Error in uploadProfileImage:', error);
     return {
       success: false,
@@ -260,6 +285,10 @@ export const deleteProfileImage = async (
   userId: string
 ): Promise<boolean> => {
   try {
+    console.log('=== AVATAR DELETE START ===');
+    console.log('Avatar URL:', avatarUrl);
+    console.log('User ID:', userId);
+    
     if (!avatarUrl || !userId) {
       console.error('Invalid parameters for deleteProfileImage');
       return false;
@@ -276,7 +305,7 @@ export const deleteProfileImage = async (
 
     const filePath = `${userId}/${fileName}`;
     
-    console.log('Deleting profile image:', filePath);
+    console.log('Deleting profile image from avatars bucket:', filePath);
     
     const { error } = await supabase.storage
       .from('avatars')
@@ -288,6 +317,7 @@ export const deleteProfileImage = async (
     }
 
     // Update the user's profile to remove the avatar URL
+    console.log('Updating profile to remove avatar URL...');
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ 
@@ -301,12 +331,13 @@ export const deleteProfileImage = async (
       // Don't fail the deletion, just log the error
       console.warn('Avatar deleted but profile not updated:', profileError.message);
     } else {
-      console.log('Profile updated after avatar deletion');
+      console.log('Profile updated after avatar deletion successfully');
     }
 
-    console.log('Profile image deleted successfully');
+    console.log('=== AVATAR DELETE SUCCESS ===');
     return true;
   } catch (error) {
+    console.error('=== AVATAR DELETE FAILED ===');
     console.error('Error in deleteProfileImage:', error);
     return false;
   }
@@ -394,9 +425,11 @@ export const resizeImage = async (
   return uri;
 };
 
-// Helper function to get all user avatars
+// Helper function to get all user avatars from the avatars bucket
 export const getUserAvatars = async (userId: string): Promise<string[]> => {
   try {
+    console.log('Getting user avatars from avatars bucket for user:', userId);
+    
     const { data, error } = await supabase.storage
       .from('avatars')
       .list(userId, {
@@ -410,8 +443,11 @@ export const getUserAvatars = async (userId: string): Promise<string[]> => {
     }
 
     if (!data) {
+      console.log('No avatars found for user:', userId);
       return [];
     }
+
+    console.log('Found avatars:', data.length);
 
     // Return full URLs for each avatar
     return data.map(file => {
@@ -423,9 +459,11 @@ export const getUserAvatars = async (userId: string): Promise<string[]> => {
   }
 };
 
-// Helper function to clean up old avatars (keep only the latest 3)
+// Helper function to clean up old avatars (keep only the latest 3) from the avatars bucket
 export const cleanupOldAvatars = async (userId: string): Promise<void> => {
   try {
+    console.log('Cleaning up old avatars for user:', userId);
+    
     const { data, error } = await supabase.storage
       .from('avatars')
       .list(userId, {
@@ -439,9 +477,13 @@ export const cleanupOldAvatars = async (userId: string): Promise<void> => {
       return;
     }
 
+    console.log('Found', data.length, 'avatars for user');
+
     // Keep only the latest 3 avatars, delete the rest
     if (data.length > 3) {
       const filesToDelete = data.slice(3).map(file => `${userId}/${file.name}`);
+      
+      console.log('Deleting', filesToDelete.length, 'old avatars');
       
       const { error: deleteError } = await supabase.storage
         .from('avatars')
@@ -452,16 +494,19 @@ export const cleanupOldAvatars = async (userId: string): Promise<void> => {
       } else {
         console.log(`Cleaned up ${filesToDelete.length} old avatars for user ${userId}`);
       }
+    } else {
+      console.log('No cleanup needed, user has', data.length, 'avatars');
     }
   } catch (error) {
     console.error('Error in cleanupOldAvatars:', error);
   }
 };
 
-// Test function to verify storage connection
+// Test function to verify storage connection to the avatars bucket
 export const testStorageConnection = async (): Promise<{ success: boolean; message: string }> => {
   try {
-    console.log('Testing storage connection...');
+    console.log('=== TESTING STORAGE CONNECTION ===');
+    console.log('Testing connection to avatars bucket...');
     
     // Try to list buckets to test connection
     const { data, error } = await supabase.storage.listBuckets();
@@ -474,22 +519,40 @@ export const testStorageConnection = async (): Promise<{ success: boolean; messa
       };
     }
     
-    console.log('Storage buckets found:', data);
+    console.log('Storage buckets found:', data?.map(b => b.name));
     
     // Check if avatars bucket exists
     const avatarsBucket = data?.find(bucket => bucket.name === 'avatars');
     if (!avatarsBucket) {
+      console.error('Avatars bucket not found');
       return {
         success: false,
-        message: 'Avatar-Bucket nicht gefunden'
+        message: 'Avatar-Bucket (avatars) nicht gefunden'
       };
     }
     
+    console.log('Avatars bucket found:', avatarsBucket);
+    
+    // Test listing objects in the avatars bucket
+    const { data: objects, error: listError } = await supabase.storage
+      .from('avatars')
+      .list('', { limit: 1 });
+    
+    if (listError) {
+      console.error('Error listing objects in avatars bucket:', listError);
+      return {
+        success: false,
+        message: `Fehler beim Zugriff auf Avatar-Bucket: ${listError.message}`
+      };
+    }
+    
+    console.log('=== STORAGE CONNECTION SUCCESS ===');
     return {
       success: true,
-      message: `Verbindung erfolgreich! ${data?.length || 0} Buckets gefunden.`
+      message: `Verbindung erfolgreich! Avatar-Bucket gefunden und zugänglich.`
     };
   } catch (error) {
+    console.error('=== STORAGE CONNECTION FAILED ===');
     console.error('Error testing storage connection:', error);
     return {
       success: false,

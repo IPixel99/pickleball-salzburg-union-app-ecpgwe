@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { Text, View, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
-import Icon from '../../components/Icon';
-import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import Icon from '../../components/Icon';
+import { Text, View, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase } from '../../lib/supabase';
+import { useRouter } from 'expo-router';
 import QRCodeDisplay from '../../components/QRCodeDisplay';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 
 interface Profile {
   id: string;
@@ -21,17 +21,19 @@ interface Profile {
 }
 
 export default function ProfileScreen() {
-  const router = useRouter();
-  const { user, signOut } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showQR, setShowQR] = useState(false);
+
+  const { user, signOut } = useAuth();
+  const router = useRouter();
 
   useFocusEffect(
     React.useCallback(() => {
       if (user) {
         fetchProfile();
       } else {
-        setLoading(false);
+        setIsLoading(false);
       }
     }, [user])
   );
@@ -41,6 +43,7 @@ export default function ProfileScreen() {
 
     try {
       console.log('Fetching profile for user:', user.id);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -49,46 +52,52 @@ export default function ProfileScreen() {
 
       if (error) {
         console.error('Error fetching profile:', error);
-        // If profile doesn't exist, create one
+        
+        // If profile doesn't exist, create it
         if (error.code === 'PGRST116') {
-          console.log('Profile not found, creating new profile');
+          console.log('Profile not found, creating new profile...');
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
-            .insert({
-              id: user.id,
-              email: user.email,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
+            .insert([
+              {
+                id: user.id,
+                email: user.email,
+                first_name: '',
+                last_name: '',
+                avatar_url: null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              }
+            ])
             .select()
             .single();
 
           if (createError) {
             console.error('Error creating profile:', createError);
           } else {
-            console.log('New profile created:', newProfile);
+            console.log('Profile created successfully:', newProfile);
             setProfile(newProfile);
           }
         }
       } else {
-        console.log('Profile fetched:', data);
+        console.log('Profile loaded successfully:', data);
         setProfile(data);
       }
     } catch (error) {
-      console.error('Error in fetchProfile:', error);
+      console.error('Unexpected error fetching profile:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     Alert.alert(
       'Abmelden',
       'Möchtest du dich wirklich abmelden?',
       [
         { text: 'Abbrechen', style: 'cancel' },
-        {
-          text: 'Abmelden',
+        { 
+          text: 'Abmelden', 
           style: 'destructive',
           onPress: async () => {
             try {
@@ -96,7 +105,7 @@ export default function ProfileScreen() {
               router.replace('/auth/login');
             } catch (error) {
               console.error('Error signing out:', error);
-              Alert.alert('Fehler', 'Beim Abmelden ist ein Fehler aufgetreten.');
+              Alert.alert('Fehler', 'Fehler beim Abmelden');
             }
           }
         }
@@ -126,44 +135,33 @@ export default function ProfileScreen() {
       case 'about':
         router.push('/profile/about');
         break;
+      case 'qr':
+        setShowQR(true);
+        break;
       default:
         console.log('Unknown option:', option);
     }
   };
 
-  const getDisplayName = (): string => {
-    if (profile?.first_name && profile?.last_name) {
-      return `${profile.first_name} ${profile.last_name}`;
+  const getDisplayName = () => {
+    if (profile?.first_name || profile?.last_name) {
+      return `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
     }
-    if (profile?.first_name) {
-      return profile.first_name;
-    }
-    if (profile?.email) {
-      return profile.email;
-    }
-    return 'Benutzer';
+    return user?.email || 'Benutzer';
   };
 
-  const getInitials = (): string => {
-    if (profile?.first_name && profile?.last_name) {
-      return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
-    }
-    if (profile?.first_name) {
-      return profile.first_name[0].toUpperCase();
-    }
-    if (profile?.email) {
-      return profile.email[0].toUpperCase();
-    }
-    return 'U';
+  const getInitials = () => {
+    const firstName = profile?.first_name || '';
+    const lastName = profile?.last_name || '';
+    const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    return initials || user?.email?.charAt(0).toUpperCase() || '?';
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <SafeAreaView style={[commonStyles.container, commonStyles.centerContent]}>
+      <SafeAreaView style={[commonStyles.container, commonStyles.centered]}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[commonStyles.text, { marginTop: 16 }]}>
-          Profil wird geladen...
-        </Text>
+        <Text style={[commonStyles.text, { marginTop: 10 }]}>Lade Profil...</Text>
       </SafeAreaView>
     );
   }
@@ -171,188 +169,144 @@ export default function ProfileScreen() {
   if (!user) {
     return (
       <SafeAreaView style={commonStyles.container}>
-        <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
-          {/* Header */}
-          <Text style={[commonStyles.title, { color: colors.primary, marginBottom: 30 }]}>
-            Profil
+        <View style={[commonStyles.content, commonStyles.centered]}>
+          <Icon name="user" size={80} color={colors.textSecondary} />
+          <Text style={[commonStyles.title, { marginTop: 20, marginBottom: 10 }]}>
+            Nicht angemeldet
           </Text>
-
-          {/* Login Prompt */}
-          <View style={[commonStyles.card, { alignItems: 'center', marginBottom: 30 }]}>
-            <Icon name="person-circle" size={80} color={colors.textLight} />
-            <Text style={[commonStyles.text, { marginTop: 16, marginBottom: 8, textAlign: 'center' }]}>
-              Nicht angemeldet
-            </Text>
-            <Text style={[commonStyles.textLight, { textAlign: 'center', marginBottom: 24 }]}>
-              Melde dich an, um dein Profil zu verwalten und alle Funktionen zu nutzen.
-            </Text>
-            
-            <TouchableOpacity
-              style={[buttonStyles.primary, { width: '100%', marginBottom: 12 }]}
-              onPress={handleLogin}
-            >
-              <Text style={commonStyles.buttonTextWhite}>Anmelden</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[buttonStyles.secondary, { width: '100%' }]}
-              onPress={handleSignup}
-            >
-              <Text style={commonStyles.buttonText}>Registrieren</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+          <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 30, color: colors.textSecondary }]}>
+            Melde dich an, um dein Profil zu sehen und Events zu verwalten.
+          </Text>
+          
+          <TouchableOpacity style={[buttonStyles.primary, { marginBottom: 15 }]} onPress={handleLogin}>
+            <Text style={buttonStyles.primaryText}>Anmelden</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={buttonStyles.secondary} onPress={handleSignup}>
+            <Text style={buttonStyles.secondaryText}>Registrieren</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
 
+  const profileOptions = [
+    { id: 'edit', title: 'Profil bearbeiten', icon: 'edit', subtitle: 'Name und Profilbild ändern' },
+    { id: 'qr', title: 'QR-Code anzeigen', icon: 'qr-code', subtitle: 'Deinen QR-Code teilen' },
+    { id: 'settings', title: 'Einstellungen', icon: 'settings', subtitle: 'App-Einstellungen und Tests' },
+    { id: 'help', title: 'Hilfe & Support', icon: 'help-circle', subtitle: 'Häufige Fragen und Kontakt' },
+    { id: 'about', title: 'Über die App', icon: 'info', subtitle: 'Version und Informationen' },
+  ];
+
   return (
     <SafeAreaView style={commonStyles.container}>
       <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <Text style={[commonStyles.title, { color: colors.primary, marginBottom: 30 }]}>
-          Profil
-        </Text>
-
-        {/* Profile Card */}
-        <View style={[commonStyles.card, { alignItems: 'center', marginBottom: 30 }]}>
-          {/* Profile Picture */}
-          {profile?.avatar_url ? (
-            <Image
-              source={{ uri: profile.avatar_url }}
-              style={{
-                width: 100,
-                height: 100,
-                borderRadius: 50,
-                marginBottom: 16,
-                backgroundColor: colors.background,
-              }}
-              onError={(error) => {
-                console.error('Error loading profile avatar:', error);
-                // Don't set avatar_url to null here as it might cause infinite re-renders
-              }}
-            />
-          ) : (
-            <View
-              style={{
-                width: 100,
-                height: 100,
-                borderRadius: 50,
-                backgroundColor: colors.primary,
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginBottom: 16,
-              }}
-            >
-              <Text style={{ fontSize: 40, fontWeight: 'bold', color: colors.white }}>
+        {/* Profile Header */}
+        <View style={[commonStyles.card, { alignItems: 'center', marginBottom: 20 }]}>
+          <View style={{
+            width: 100,
+            height: 100,
+            borderRadius: 50,
+            backgroundColor: colors.surface,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: 15,
+          }}>
+            {profile?.avatar_url ? (
+              <Image
+                source={{ uri: profile.avatar_url }}
+                style={{
+                  width: 100,
+                  height: 100,
+                  borderRadius: 50,
+                }}
+                onError={(error) => {
+                  console.error('Error loading avatar image:', error);
+                }}
+              />
+            ) : (
+              <Text style={{
+                fontSize: 32,
+                fontWeight: 'bold',
+                color: colors.primary,
+              }}>
                 {getInitials()}
               </Text>
-            </View>
-          )}
-
-          {/* Name and Email */}
-          <Text style={[commonStyles.text, { fontSize: 20, fontWeight: '600', marginBottom: 4 }]}>
+            )}
+          </View>
+          
+          <Text style={[commonStyles.title, { marginBottom: 5 }]}>
             {getDisplayName()}
           </Text>
-          {profile?.email && (
-            <Text style={[commonStyles.textLight, { marginBottom: 16 }]}>
-              {profile.email}
-            </Text>
-          )}
-
-          {/* Edit Profile Button */}
-          <TouchableOpacity
-            style={[buttonStyles.primary, { paddingHorizontal: 24 }]}
-            onPress={() => handleOptionPress('edit')}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Icon name="create" size={18} color={colors.white} />
-              <Text style={[commonStyles.buttonTextWhite, { marginLeft: 8 }]}>
-                Profil bearbeiten
-              </Text>
-            </View>
-          </TouchableOpacity>
+          
+          <Text style={[commonStyles.text, { color: colors.textSecondary }]}>
+            {user.email}
+          </Text>
         </View>
 
-        {/* QR Code */}
-        <View style={[commonStyles.card, { marginBottom: 30 }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <Icon name="qr-code" size={24} color={colors.primary} />
-            <Text style={[commonStyles.text, { fontWeight: '600', marginLeft: 12 }]}>
-              Mein QR-Code
-            </Text>
-          </View>
-          <QRCodeDisplay userId={user.id} />
-        </View>
+        {/* Profile Options */}
+        <View style={commonStyles.card}>
+          <Text style={[commonStyles.subtitle, { marginBottom: 20 }]}>
+            Profil-Optionen
+          </Text>
 
-        {/* Menu Options */}
-        <View style={[commonStyles.card, { marginBottom: 30 }]}>
-          {/* Settings */}
-          <TouchableOpacity
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: colors.border,
-            }}
-            onPress={() => handleOptionPress('settings')}
-          >
-            <Icon name="settings" size={24} color={colors.text} />
-            <Text style={[commonStyles.text, { flex: 1, marginLeft: 16 }]}>
-              Einstellungen
-            </Text>
-            <Icon name="chevron-forward" size={20} color={colors.textLight} />
-          </TouchableOpacity>
+          {profileOptions.map((option, index) => (
+            <TouchableOpacity
+              key={option.id}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 15,
+                borderBottomWidth: index < profileOptions.length - 1 ? 1 : 0,
+                borderBottomColor: colors.border,
+              }}
+              onPress={() => handleOptionPress(option.id)}
+            >
+              <View style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: colors.primary + '20',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 15,
+              }}>
+                <Icon name={option.icon} size={20} color={colors.primary} />
+              </View>
 
-          {/* Help */}
-          <TouchableOpacity
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: colors.border,
-            }}
-            onPress={() => handleOptionPress('help')}
-          >
-            <Icon name="help-circle" size={24} color={colors.text} />
-            <Text style={[commonStyles.text, { flex: 1, marginLeft: 16 }]}>
-              Hilfe & Support
-            </Text>
-            <Icon name="chevron-forward" size={20} color={colors.textLight} />
-          </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                  {option.title}
+                </Text>
+                <Text style={[commonStyles.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                  {option.subtitle}
+                </Text>
+              </View>
 
-          {/* About */}
-          <TouchableOpacity
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 16,
-            }}
-            onPress={() => handleOptionPress('about')}
-          >
-            <Icon name="information-circle" size={24} color={colors.text} />
-            <Text style={[commonStyles.text, { flex: 1, marginLeft: 16 }]}>
-              Über die App
-            </Text>
-            <Icon name="chevron-forward" size={20} color={colors.textLight} />
-          </TouchableOpacity>
+              <Icon name="chevron-right" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* Logout Button */}
         <TouchableOpacity
-          style={[buttonStyles.secondary, { marginBottom: 30 }]}
+          style={[buttonStyles.danger, { margin: 20, marginBottom: 40 }]}
           onPress={handleLogout}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="log-out" size={18} color={colors.text} />
-            <Text style={[commonStyles.buttonText, { marginLeft: 8 }]}>
-              Abmelden
-            </Text>
-          </View>
+          <Icon name="log-out" size={20} color="white" style={{ marginRight: 10 }} />
+          <Text style={buttonStyles.dangerText}>Abmelden</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* QR Code Modal */}
+      {showQR && user && (
+        <QRCodeDisplay
+          visible={showQR}
+          onClose={() => setShowQR(false)}
+          userId={user.id}
+          userName={getDisplayName()}
+        />
+      )}
     </SafeAreaView>
   );
 }

@@ -134,6 +134,9 @@ export default function ProfileScreen() {
       case 'Einstellungen':
         router.push('/profile/settings');
         break;
+      case 'Supabase Test':
+        router.push('/test-supabase');
+        break;
       case 'Hilfe & Support':
         router.push('/profile/help');
         break;
@@ -284,6 +287,7 @@ export default function ProfileScreen() {
           {[
             { title: 'Profil bearbeiten', icon: 'create' },
             { title: 'Einstellungen', icon: 'settings' },
+            { title: 'Supabase Test', icon: 'cloud-done' },
             { title: 'Hilfe & Support', icon: 'help-circle' },
             { title: 'Über die App', icon: 'information-circle' },
           ].map((option, index) => (

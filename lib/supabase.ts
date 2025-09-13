@@ -13,6 +13,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
+// Export the URL for use in image utils
+export { supabaseUrl };
+
 export type Database = {
   public: {
     Tables: {

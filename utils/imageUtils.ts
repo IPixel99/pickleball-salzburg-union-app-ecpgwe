@@ -1,5 +1,5 @@
 
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseUrl } from '../lib/supabase';
 import { Platform } from 'react-native';
 
 export interface ImageUploadResult {
@@ -117,6 +117,7 @@ export const uploadProfileImage = async (
   try {
     console.log('Starting profile image upload for user:', userId);
     console.log('Image URI:', uri);
+    console.log('Using Supabase URL:', supabaseUrl);
     
     if (!uri || !userId) {
       return {
@@ -220,18 +221,8 @@ export const uploadProfileImage = async (
 
     console.log('Image uploaded successfully:', data);
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(fileName);
-
-    if (!publicUrl) {
-      return {
-        success: false,
-        error: 'Fehler beim Generieren der Bild-URL'
-      };
-    }
-
+    // Get public URL using the correct format
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/avatars/${fileName}`;
     console.log('Public URL generated:', publicUrl);
 
     // Update the user's profile with the new avatar URL
@@ -330,11 +321,7 @@ export const getAvatarUrl = (userId: string, filename?: string): string => {
     filename = `avatar.jpg`;
   }
   
-  const { data: { publicUrl } } = supabase.storage
-    .from('avatars')
-    .getPublicUrl(`${userId}/${filename}`);
-    
-  return publicUrl || '';
+  return `${supabaseUrl}/storage/v1/object/public/avatars/${userId}/${filename}`;
 };
 
 // Helper function to validate image URI
@@ -428,10 +415,7 @@ export const getUserAvatars = async (userId: string): Promise<string[]> => {
 
     // Return full URLs for each avatar
     return data.map(file => {
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(`${userId}/${file.name}`);
-      return publicUrl;
+      return `${supabaseUrl}/storage/v1/object/public/avatars/${userId}/${file.name}`;
     }).filter(url => url);
   } catch (error) {
     console.error('Error in getUserAvatars:', error);
@@ -471,5 +455,45 @@ export const cleanupOldAvatars = async (userId: string): Promise<void> => {
     }
   } catch (error) {
     console.error('Error in cleanupOldAvatars:', error);
+  }
+};
+
+// Test function to verify storage connection
+export const testStorageConnection = async (): Promise<{ success: boolean; message: string }> => {
+  try {
+    console.log('Testing storage connection...');
+    
+    // Try to list buckets to test connection
+    const { data, error } = await supabase.storage.listBuckets();
+    
+    if (error) {
+      console.error('Storage connection test failed:', error);
+      return {
+        success: false,
+        message: `Verbindung fehlgeschlagen: ${error.message}`
+      };
+    }
+    
+    console.log('Storage buckets found:', data);
+    
+    // Check if avatars bucket exists
+    const avatarsBucket = data?.find(bucket => bucket.name === 'avatars');
+    if (!avatarsBucket) {
+      return {
+        success: false,
+        message: 'Avatar-Bucket nicht gefunden'
+      };
+    }
+    
+    return {
+      success: true,
+      message: `Verbindung erfolgreich! ${data?.length || 0} Buckets gefunden.`
+    };
+  } catch (error) {
+    console.error('Error testing storage connection:', error);
+    return {
+      success: false,
+      message: 'Unerwarteter Fehler beim Testen der Verbindung'
+    };
   }
 };

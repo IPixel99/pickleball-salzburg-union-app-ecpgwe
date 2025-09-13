@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Text, View, ScrollView, TouchableOpacity, Alert, RefreshControl, Image } from 'react-native';
 import { commonStyles, colors } from '../../styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import Icon from '../../components/Icon';
 import { supabase } from '../../lib/supabase';
 
@@ -18,6 +19,7 @@ interface NewsPost {
 }
 
 export default function NewsScreen() {
+  const router = useRouter();
   const [newsPosts, setNewsPosts] = useState<NewsPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -57,9 +59,8 @@ export default function NewsScreen() {
   };
 
   const handleReadMore = (newsId: string) => {
-    console.log('Reading more about news:', newsId);
-    // TODO: Navigate to detailed news view
-    Alert.alert('Artikel lesen', 'Detailansicht wird bald verfügbar sein!');
+    console.log('Navigating to news detail:', newsId);
+    router.push(`/news/${newsId}`);
   };
 
   const formatDate = (dateString: string) => {

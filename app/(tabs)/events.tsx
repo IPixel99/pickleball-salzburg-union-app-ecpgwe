@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from '../../components/Icon';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { isEventUpcoming, getTimeUntilEvent } from '../../utils/dateUtils';
 
 interface Event {
   id: string;
@@ -41,7 +42,12 @@ export default function EventsScreen() {
       }
 
       console.log('Fetched events:', data);
-      setEvents(data || []);
+      
+      // Filter to show only upcoming events
+      const upcomingEvents = (data || []).filter(event => isEventUpcoming(event.start_time));
+      console.log('Filtered upcoming events:', upcomingEvents);
+      
+      setEvents(upcomingEvents);
     } catch (error) {
       console.error('Error in fetchEvents:', error);
       Alert.alert('Fehler', 'Ein unerwarteter Fehler ist aufgetreten.');
@@ -128,6 +134,10 @@ export default function EventsScreen() {
     });
   };
 
+  const isNextEvent = (index: number) => {
+    return index === 0 && events.length > 0;
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={commonStyles.container}>
@@ -149,9 +159,9 @@ export default function EventsScreen() {
       >
         {/* Header */}
         <View style={{ marginBottom: 30 }}>
-          <Text style={[commonStyles.title, { color: colors.primary }]}>Events</Text>
+          <Text style={[commonStyles.title, { color: colors.primary }]}>Kommende Events</Text>
           <Text style={commonStyles.textLight}>
-            Entdecke kommende Pickleball-Events und melde dich an
+            Entdecke die nächsten Pickleball-Events und melde dich an
           </Text>
         </View>
 
@@ -160,15 +170,43 @@ export default function EventsScreen() {
           <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
             <Icon name="calendar" size={48} color={colors.textLight} style={{ marginBottom: 16 }} />
             <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 8 }]}>
-              Keine Events verfügbar
+              Keine kommenden Events
             </Text>
             <Text style={[commonStyles.textLight, { textAlign: 'center' }]}>
               Schau später wieder vorbei oder kontaktiere den Verein für weitere Informationen.
             </Text>
           </View>
         ) : (
-          events.map((event) => (
-            <View key={event.id} style={commonStyles.card}>
+          events.map((event, index) => (
+            <View 
+              key={event.id} 
+              style={[
+                commonStyles.card,
+                isNextEvent(index) && {
+                  borderWidth: 2,
+                  borderColor: colors.primary,
+                  backgroundColor: colors.primaryLight,
+                }
+              ]}
+            >
+              {/* Next Event Badge */}
+              {isNextEvent(index) && (
+                <View style={{
+                  position: 'absolute',
+                  top: -8,
+                  right: 16,
+                  backgroundColor: colors.primary,
+                  paddingHorizontal: 12,
+                  paddingVertical: 4,
+                  borderRadius: 12,
+                  zIndex: 1,
+                }}>
+                  <Text style={[commonStyles.text, { color: colors.white, fontSize: 12, fontWeight: '600' }]}>
+                    Nächstes Event
+                  </Text>
+                </View>
+              )}
+
               {/* Event Header */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                 <View style={{
@@ -190,9 +228,14 @@ export default function EventsScreen() {
                   <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 2 }]}>
                     {event.title}
                   </Text>
-                  <Text style={[commonStyles.textLight, { fontSize: 12 }]}>
-                    {getEventTypeLabel(event.type)}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={[commonStyles.textLight, { fontSize: 12, marginRight: 8 }]}>
+                      {getEventTypeLabel(event.type)}
+                    </Text>
+                    <Text style={[commonStyles.textLight, { fontSize: 12, color: colors.primary, fontWeight: '600' }]}>
+                      {getTimeUntilEvent(event.start_time)}
+                    </Text>
+                  </View>
                 </View>
               </View>
 
@@ -225,10 +268,16 @@ export default function EventsScreen() {
 
               {/* Join Button */}
               <TouchableOpacity
-                style={[buttonStyles.primary, { width: '100%' }]}
+                style={[
+                  buttonStyles.primary, 
+                  { width: '100%' },
+                  isNextEvent(index) && { backgroundColor: colors.primary }
+                ]}
                 onPress={() => handleJoinEvent(event.id)}
               >
-                <Text style={commonStyles.buttonTextWhite}>Teilnehmen</Text>
+                <Text style={commonStyles.buttonTextWhite}>
+                  {isNextEvent(index) ? 'Jetzt teilnehmen' : 'Teilnehmen'}
+                </Text>
               </TouchableOpacity>
             </View>
           ))

@@ -2,149 +2,177 @@
 import { StyleSheet, ViewStyle, TextStyle } from 'react-native';
 
 export const colors = {
-  primary: '#E53E3E',        // Red from logo
-  secondary: '#FFD700',      // Yellow from logo  
-  accent: '#2D3748',         // Dark gray/black from logo
-  background: '#FFFFFF',     // White background
-  backgroundAlt: '#F7FAFC',  // Light gray background
-  text: '#2D3748',           // Dark text
-  textLight: '#718096',      // Light gray text
-  card: '#FFFFFF',           // White card background
-  border: '#E2E8F0',         // Light border
-  success: '#38A169',        // Success green
-  error: '#E53E3E',          // Error red (same as primary)
-  warning: '#ED8936',        // Warning orange
-  highlight: '#FED7D7',      // Light red highlight
-  yellow: '#FFD700',         // Yellow accent
-  red: '#E53E3E',            // Red accent
-  black: '#2D3748',          // Black accent
-  white: '#FFFFFF',          // White accent
+  primary: '#FF6B35',
+  primaryLight: '#FFF5F3',
+  secondary: '#4ECDC4',
+  background: '#FFFFFF',
+  surface: '#F8F9FA',
+  text: '#2C3E50',
+  textLight: '#7F8C8D',
+  border: '#E9ECEF',
+  success: '#27AE60',
+  warning: '#F39C12',
+  error: '#E74C3C',
+  white: '#FFFFFF',
+  black: '#000000',
+  red: '#FF0000',
+  yellow: '#FFD700',
 };
 
-export const buttonStyles = StyleSheet.create({
-  primary: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondary: {
-    backgroundColor: colors.secondary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
-
 export const commonStyles = StyleSheet.create({
-  wrapper: {
-    backgroundColor: colors.background,
-    width: '100%',
-    height: '100%',
-  },
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    width: '100%',
-    height: '100%',
-  },
+  } as ViewStyle,
+  
   content: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
-  },
+  } as ViewStyle,
+  
   centerContent: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 20,
-  },
+  } as ViewStyle,
+  
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    textAlign: 'center',
+    fontSize: 32,
+    fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 10
-  },
+    marginBottom: 8,
+  } as TextStyle,
+  
   subtitle: {
     fontSize: 20,
     fontWeight: '600',
     color: colors.text,
     marginBottom: 8,
-  },
+  } as TextStyle,
+  
   text: {
     fontSize: 16,
-    fontWeight: '400',
     color: colors.text,
-    marginBottom: 8,
     lineHeight: 24,
-  },
+  } as TextStyle,
+  
   textLight: {
     fontSize: 14,
-    fontWeight: '400',
     color: colors.textLight,
     lineHeight: 20,
-  },
-  section: {
-    width: '100%',
-    marginBottom: 20,
-  },
+  } as TextStyle,
+  
   card: {
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 8,
-    width: '100%',
-    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
-    elevation: 3,
-  },
-  shadow: {
-    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
-    elevation: 3,
-  },
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: colors.black,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  } as ViewStyle,
+  
   input: {
+    backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
     color: colors.text,
-    backgroundColor: colors.background,
     marginBottom: 16,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-  },
+  } as ViewStyle,
+  
+  inputFocused: {
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  } as ViewStyle,
+  
   buttonTextWhite: {
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  tabBarStyle: {
-    backgroundColor: colors.background,
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
-    paddingBottom: 8,
-    paddingTop: 8,
-    height: 80,
-  },
+    textAlign: 'center',
+  } as TextStyle,
+  
+  buttonTextPrimary: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  } as TextStyle,
+  
+  border: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  } as ViewStyle,
+});
+
+export const buttonStyles = StyleSheet.create({
+  primary: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    shadowColor: colors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  } as ViewStyle,
+  
+  secondary: {
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  } as ViewStyle,
+  
+  outline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  } as ViewStyle,
+  
+  ghost: {
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  } as ViewStyle,
 });

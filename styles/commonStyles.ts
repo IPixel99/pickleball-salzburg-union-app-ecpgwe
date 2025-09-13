@@ -2,19 +2,23 @@
 import { StyleSheet, ViewStyle, TextStyle } from 'react-native';
 
 export const colors = {
-  primary: '#90EE90',      // Light green for pickleball theme
-  secondary: '#228B22',    // Forest green
-  accent: '#FFD700',       // Yellow accent
-  background: '#FFFFFF',   // White background for light theme
-  backgroundAlt: '#F8F8F8', // Light gray background
-  text: '#333333',         // Dark gray text
-  textLight: '#666666',    // Lighter gray text
-  card: '#FFFFFF',         // White card background
-  border: '#E0E0E0',       // Light border
-  success: '#4CAF50',      // Success green
-  error: '#F44336',        // Error red
-  warning: '#FF9800',      // Warning orange
-  highlight: '#C1FFC1',    // Light green highlight
+  primary: '#E53E3E',        // Red from logo
+  secondary: '#FFD700',      // Yellow from logo  
+  accent: '#2D3748',         // Dark gray/black from logo
+  background: '#FFFFFF',     // White background
+  backgroundAlt: '#F7FAFC',  // Light gray background
+  text: '#2D3748',           // Dark text
+  textLight: '#718096',      // Light gray text
+  card: '#FFFFFF',           // White card background
+  border: '#E2E8F0',         // Light border
+  success: '#38A169',        // Success green
+  error: '#E53E3E',          // Error red (same as primary)
+  warning: '#ED8936',        // Warning orange
+  highlight: '#FED7D7',      // Light red highlight
+  yellow: '#FFD700',         // Yellow accent
+  red: '#E53E3E',            // Red accent
+  black: '#2D3748',          // Black accent
+  white: '#FFFFFF',          // White accent
 };
 
 export const buttonStyles = StyleSheet.create({

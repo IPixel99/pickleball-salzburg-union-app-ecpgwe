@@ -1,13 +1,15 @@
 
 import React, { useState } from 'react';
-import { Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { Text, View, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Icon from '../../components/Icon';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn, resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -22,22 +24,50 @@ export default function LoginScreen() {
     setIsLoading(true);
     console.log('Login attempt with:', { email, password: '***' });
 
-    // TODO: Integrate with Supabase authentication
-    // For now, simulate login process
-    setTimeout(() => {
+    try {
+      await signIn(email, password);
+      console.log('Login successful');
+      Alert.alert('Erfolg', 'Du wurdest erfolgreich angemeldet!', [
+        { text: 'OK', onPress: () => router.push('/(tabs)') }
+      ]);
+    } catch (error: any) {
+      console.error('Login error:', error);
+      let errorMessage = 'Ein unerwarteter Fehler ist aufgetreten.';
+      
+      if (error.message) {
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = 'Ungültige Anmeldedaten. Bitte überprüfe deine E-Mail und dein Passwort.';
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = 'Bitte bestätige deine E-Mail-Adresse, bevor du dich anmeldest.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      Alert.alert('Anmeldung fehlgeschlagen', errorMessage);
+    } finally {
       setIsLoading(false);
-      console.log('Login successful - will integrate with Supabase later');
-      router.push('/(tabs)');
-    }, 1500);
+    }
   };
 
-  const handleForgotPassword = () => {
-    console.log('Forgot password - will integrate with Supabase later');
-    Alert.alert(
-      'Passwort zurücksetzen',
-      'Diese Funktion wird mit Supabase integriert. Du erhältst dann eine E-Mail zum Zurücksetzen deines Passworts.',
-      [{ text: 'OK' }]
-    );
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert('E-Mail erforderlich', 'Bitte gib deine E-Mail-Adresse ein, um dein Passwort zurückzusetzen.');
+      return;
+    }
+
+    try {
+      console.log('Resetting password for:', email);
+      await resetPassword(email);
+      Alert.alert(
+        'Passwort zurücksetzen',
+        'Eine E-Mail zum Zurücksetzen deines Passworts wurde an deine E-Mail-Adresse gesendet.',
+        [{ text: 'OK' }]
+      );
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      Alert.alert('Fehler', 'Beim Zurücksetzen des Passworts ist ein Fehler aufgetreten.');
+    }
   };
 
   const handleSignup = () => {
@@ -56,26 +86,20 @@ export default function LoginScreen() {
           <TouchableOpacity onPress={handleBack} style={{ marginRight: 16 }}>
             <Icon name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={commonStyles.title}>Anmelden</Text>
+          <Text style={[commonStyles.title, { color: colors.primary }]}>Anmelden</Text>
         </View>
 
         {/* Logo */}
-        <View style={{
-          width: 80,
-          height: 80,
-          backgroundColor: colors.primary,
-          borderRadius: 40,
-          alignItems: 'center',
-          justifyContent: 'center',
-          alignSelf: 'center',
-          marginBottom: 30,
-        }}>
-          <Text style={{
-            fontSize: 20,
-            fontWeight: 'bold',
-            color: colors.text,
-          }}>PSU</Text>
-        </View>
+        <Image
+          source={require('../../assets/images/c0025ffd-25dc-49f5-9153-918105ed49ee.png')}
+          style={{
+            width: 80,
+            height: 80,
+            alignSelf: 'center',
+            marginBottom: 30,
+            resizeMode: 'contain',
+          }}
+        />
 
         <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 30 }]}>
           Melde dich mit deinem Konto an
@@ -154,17 +178,6 @@ export default function LoginScreen() {
               Registrieren
             </Text>
           </TouchableOpacity>
-        </View>
-
-        {/* Supabase Integration Note */}
-        <View style={[commonStyles.card, { marginTop: 30, backgroundColor: colors.highlight }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <Icon name="information-circle" size={20} color={colors.secondary} style={{ marginRight: 8 }} />
-            <Text style={[commonStyles.text, { fontWeight: '600' }]}>Supabase Integration</Text>
-          </View>
-          <Text style={commonStyles.textLight}>
-            Die Authentifizierung wird später mit Supabase integriert. Derzeit ist dies eine Demo-Version.
-          </Text>
         </View>
       </View>
     </SafeAreaView>

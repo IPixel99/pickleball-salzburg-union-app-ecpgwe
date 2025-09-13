@@ -21,24 +21,20 @@ export default function WelcomeScreen() {
   return (
     <SafeAreaView style={commonStyles.container}>
       <View style={commonStyles.centerContent}>
-        {/* Logo placeholder - you can replace with actual logo */}
-        <View style={{
-          width: 120,
-          height: 120,
-          backgroundColor: colors.primary,
-          borderRadius: 60,
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: 30,
-        }}>
-          <Text style={{
-            fontSize: 24,
-            fontWeight: 'bold',
-            color: colors.text,
-          }}>PSU</Text>
-        </View>
+        {/* Pickleball Salzburg Union Logo */}
+        <Image
+          source={require('../assets/images/c0025ffd-25dc-49f5-9153-918105ed49ee.png')}
+          style={{
+            width: 150,
+            height: 150,
+            marginBottom: 30,
+            resizeMode: 'contain',
+          }}
+        />
 
-        <Text style={commonStyles.title}>Pickleball Salzburg Union</Text>
+        <Text style={[commonStyles.title, { color: colors.primary }]}>
+          Pickleball Salzburg Union
+        </Text>
         <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 40 }]}>
           Willkommen bei der offiziellen App des Pickleball Salzburg Union. 
           Bleibe auf dem Laufenden mit Events, Nachrichten und mehr!

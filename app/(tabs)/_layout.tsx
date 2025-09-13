@@ -1,16 +1,16 @@
 
 import { Tabs } from 'expo-router';
-import { colors, commonStyles } from '../../styles/commonStyles';
 import Icon from '../../components/Icon';
+import { colors, commonStyles } from '../../styles/commonStyles';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
-        tabBarStyle: commonStyles.tabBarStyle,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textLight,
+        headerShown: false,
+        tabBarStyle: commonStyles.tabBarStyle,
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '500',
@@ -38,7 +38,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="news"
         options={{
-          title: 'Nachrichten',
+          title: 'News',
           tabBarIcon: ({ color, size }) => (
             <Icon name="newspaper" size={size} color={color} />
           ),

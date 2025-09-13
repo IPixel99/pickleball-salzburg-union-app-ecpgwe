@@ -1,24 +1,29 @@
 
-import React, { useState } from 'react';
-import { Text, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Text, View, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Icon from '../../components/Icon';
+import QRCodeDisplay from '../../components/QRCodeDisplay';
+import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
+
+interface Profile {
+  id: string;
+  email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Will be managed by Supabase later
-
-  // Mock user data - will be replaced with Supabase data later
-  const userData = {
-    name: 'Max Mustermann',
-    email: 'max.mustermann@email.com',
-    memberSince: '2023-06-15',
-    skillLevel: 'Fortgeschritten',
-    eventsAttended: 12,
-    favoritePosition: 'Doppel',
-  };
+  const { user, signOut, loading: authLoading } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const profileOptions = [
     { title: 'Persönliche Daten', subtitle: 'Name, E-Mail, Telefon', icon: 'person' as const },
@@ -28,13 +33,47 @@ export default function ProfileScreen() {
     { title: 'Hilfe & Support', subtitle: 'FAQ und Kontakt', icon: 'help-circle' as const },
   ];
 
+  const fetchProfile = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      console.log('Fetching profile for user:', user.id);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
+      console.log('Fetched profile:', data);
+      setProfile(data);
+    } catch (error) {
+      console.error('Error in fetchProfile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!authLoading) {
+      fetchProfile();
+    }
+  }, [user, authLoading]);
+
   const handleLogin = () => {
-    console.log('Navigating to login - will integrate with Supabase later');
+    console.log('Navigating to login');
     router.push('/auth/login');
   };
 
   const handleSignup = () => {
-    console.log('Navigating to signup - will integrate with Supabase later');
+    console.log('Navigating to signup');
     router.push('/auth/signup');
   };
 
@@ -47,10 +86,15 @@ export default function ProfileScreen() {
         { 
           text: 'Abmelden', 
           style: 'destructive',
-          onPress: () => {
-            console.log('Logging out - will integrate with Supabase later');
-            setIsLoggedIn(false);
-            // TODO: Integrate with Supabase logout
+          onPress: async () => {
+            try {
+              console.log('Logging out user');
+              await signOut();
+              Alert.alert('Erfolg', 'Du wurdest erfolgreich abgemeldet.');
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Fehler', 'Beim Abmelden ist ein Fehler aufgetreten.');
+            }
           }
         },
       ]
@@ -58,29 +102,55 @@ export default function ProfileScreen() {
   };
 
   const handleOptionPress = (option: string) => {
-    console.log(`Selected option: ${option} - will implement navigation later`);
-    // TODO: Navigate to specific screens based on option
+    console.log(`Selected option: ${option}`);
+    Alert.alert('Funktion', `${option} wird bald verfügbar sein!`);
   };
 
-  if (!isLoggedIn) {
+  const getDisplayName = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name} ${profile.last_name}`;
+    }
+    if (profile?.first_name) {
+      return profile.first_name;
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return 'Benutzer';
+  };
+
+  const getInitials = () => {
+    const name = getDisplayName();
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  if (authLoading || loading) {
+    return (
+      <SafeAreaView style={commonStyles.container}>
+        <View style={commonStyles.centerContent}>
+          <Text style={commonStyles.text}>Profil wird geladen...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!user) {
     // Not logged in view
     return (
       <SafeAreaView style={commonStyles.container}>
         <View style={commonStyles.centerContent}>
-          {/* Profile Icon */}
-          <View style={{
-            width: 100,
-            height: 100,
-            backgroundColor: colors.backgroundAlt,
-            borderRadius: 50,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 30,
-          }}>
-            <Icon name="person" size={48} color={colors.textLight} />
-          </View>
+          {/* Logo */}
+          <Image
+            source={require('../../assets/images/c0025ffd-25dc-49f5-9153-918105ed49ee.png')}
+            style={{
+              width: 100,
+              height: 100,
+              marginBottom: 30,
+              resizeMode: 'contain',
+            }}
+          />
 
-          <Text style={commonStyles.title}>Willkommen!</Text>
+          <Text style={[commonStyles.title, { color: colors.primary }]}>Willkommen!</Text>
           <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 40 }]}>
             Melde dich an oder erstelle ein Konto, um alle Funktionen der App zu nutzen.
           </Text>
@@ -97,14 +167,6 @@ export default function ProfileScreen() {
             onPress={handleSignup}
           >
             <Text style={[commonStyles.buttonText, { color: colors.primary }]}>Registrieren</Text>
-          </TouchableOpacity>
-
-          {/* Temporary login button for testing */}
-          <TouchableOpacity
-            style={[buttonStyles.secondary, { width: '100%', marginTop: 20 }]}
-            onPress={() => setIsLoggedIn(true)}
-          >
-            <Text style={commonStyles.buttonTextWhite}>Demo Login (Test)</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -126,60 +188,32 @@ export default function ProfileScreen() {
             justifyContent: 'center',
             marginBottom: 16,
           }}>
-            <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' }}>
-              {userData.name.split(' ').map(n => n[0]).join('')}
+            <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.white }}>
+              {getInitials()}
             </Text>
           </View>
           <Text style={[commonStyles.text, { fontWeight: '600', fontSize: 18, marginBottom: 4 }]}>
-            {userData.name}
+            {getDisplayName()}
           </Text>
-          <Text style={commonStyles.textLight}>{userData.email}</Text>
+          <Text style={commonStyles.textLight}>{user.email}</Text>
+          {profile?.created_at && (
+            <Text style={[commonStyles.textLight, { fontSize: 12, marginTop: 4 }]}>
+              Mitglied seit {new Date(profile.created_at).toLocaleDateString('de-DE', { 
+                year: 'numeric', 
+                month: 'long' 
+              })}
+            </Text>
+          )}
         </View>
 
-        {/* Stats Cards */}
-        <View style={{ flexDirection: 'row', marginBottom: 20 }}>
-          <View style={[commonStyles.card, { flex: 1, marginRight: 8, alignItems: 'center' }]}>
-            <Text style={[commonStyles.text, { fontWeight: '600', fontSize: 20, color: colors.primary }]}>
-              {userData.eventsAttended}
-            </Text>
-            <Text style={commonStyles.textLight}>Events</Text>
-          </View>
-          <View style={[commonStyles.card, { flex: 1, marginLeft: 8, alignItems: 'center' }]}>
-            <Text style={[commonStyles.text, { fontWeight: '600', fontSize: 20, color: colors.primary }]}>
-              {new Date().getFullYear() - new Date(userData.memberSince).getFullYear()}
-            </Text>
-            <Text style={commonStyles.textLight}>Jahre</Text>
-          </View>
-        </View>
-
-        {/* Profile Info */}
-        <View style={commonStyles.section}>
-          <Text style={commonStyles.subtitle}>Profil Informationen</Text>
-          <View style={commonStyles.card}>
-            <View style={{ marginBottom: 16 }}>
-              <Text style={commonStyles.textLight}>Mitglied seit</Text>
-              <Text style={commonStyles.text}>
-                {new Date(userData.memberSince).toLocaleDateString('de-DE', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
-              </Text>
-            </View>
-            <View style={{ marginBottom: 16 }}>
-              <Text style={commonStyles.textLight}>Spielstärke</Text>
-              <Text style={commonStyles.text}>{userData.skillLevel}</Text>
-            </View>
-            <View>
-              <Text style={commonStyles.textLight}>Bevorzugte Position</Text>
-              <Text style={commonStyles.text}>{userData.favoritePosition}</Text>
-            </View>
-          </View>
+        {/* QR Code Section */}
+        <View style={[commonStyles.card, { alignItems: 'center', marginBottom: 20, backgroundColor: colors.highlight }]}>
+          <QRCodeDisplay userId={user.id} size={150} showLabel={true} />
         </View>
 
         {/* Profile Options */}
         <View style={commonStyles.section}>
-          <Text style={commonStyles.subtitle}>Optionen</Text>
+          <Text style={[commonStyles.subtitle, { color: colors.primary }]}>Optionen</Text>
           {profileOptions.map((option, index) => (
             <TouchableOpacity 
               key={index} 
@@ -190,13 +224,13 @@ export default function ProfileScreen() {
                 <View style={{
                   width: 40,
                   height: 40,
-                  backgroundColor: colors.backgroundAlt,
+                  backgroundColor: colors.yellow,
                   borderRadius: 20,
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: 16,
                 }}>
-                  <Icon name={option.icon} size={20} color={colors.primary} />
+                  <Icon name={option.icon} size={20} color={colors.red} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>

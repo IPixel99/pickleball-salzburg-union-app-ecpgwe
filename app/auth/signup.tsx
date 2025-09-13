@@ -1,13 +1,15 @@
 
 import React, { useState } from 'react';
-import { Text, View, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { Text, View, TextInput, TouchableOpacity, Alert, ScrollView, Image } from 'react-native';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Icon from '../../components/Icon';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function SignupScreen() {
   const router = useRouter();
+  const { signUp } = useAuth();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -47,14 +49,12 @@ export default function SignupScreen() {
       confirmPassword: '***' 
     });
 
-    // TODO: Integrate with Supabase authentication
-    // For now, simulate signup process
-    setTimeout(() => {
-      setIsLoading(false);
-      console.log('Signup successful - will integrate with Supabase later');
+    try {
+      await signUp(formData.email, formData.password, formData.firstName, formData.lastName);
+      console.log('Signup successful');
       Alert.alert(
         'Registrierung erfolgreich!',
-        'Dein Konto wurde erstellt. Du kannst dich jetzt anmelden.',
+        'Dein Konto wurde erstellt. Bitte überprüfe deine E-Mails und bestätige deine E-Mail-Adresse, bevor du dich anmeldest.',
         [
           {
             text: 'OK',
@@ -62,7 +62,24 @@ export default function SignupScreen() {
           }
         ]
       );
-    }, 2000);
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      let errorMessage = 'Ein unerwarteter Fehler ist aufgetreten.';
+      
+      if (error.message) {
+        if (error.message.includes('User already registered')) {
+          errorMessage = 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits.';
+        } else if (error.message.includes('Password should be at least 6 characters')) {
+          errorMessage = 'Das Passwort muss mindestens 6 Zeichen lang sein.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      Alert.alert('Registrierung fehlgeschlagen', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLogin = () => {
@@ -85,26 +102,20 @@ export default function SignupScreen() {
           <TouchableOpacity onPress={handleBack} style={{ marginRight: 16 }}>
             <Icon name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={commonStyles.title}>Registrieren</Text>
+          <Text style={[commonStyles.title, { color: colors.primary }]}>Registrieren</Text>
         </View>
 
         {/* Logo */}
-        <View style={{
-          width: 80,
-          height: 80,
-          backgroundColor: colors.primary,
-          borderRadius: 40,
-          alignItems: 'center',
-          justifyContent: 'center',
-          alignSelf: 'center',
-          marginBottom: 30,
-        }}>
-          <Text style={{
-            fontSize: 20,
-            fontWeight: 'bold',
-            color: colors.text,
-          }}>PSU</Text>
-        </View>
+        <Image
+          source={require('../../assets/images/c0025ffd-25dc-49f5-9153-918105ed49ee.png')}
+          style={{
+            width: 80,
+            height: 80,
+            alignSelf: 'center',
+            marginBottom: 30,
+            resizeMode: 'contain',
+          }}
+        />
 
         <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 30 }]}>
           Erstelle dein Konto für den Pickleball Salzburg Union
@@ -187,7 +198,7 @@ export default function SignupScreen() {
                 <Text style={[
                   { fontSize: 14, fontWeight: '500' },
                   formData.skillLevel === level
-                    ? { color: '#FFFFFF' }
+                    ? { color: colors.white }
                     : { color: colors.text }
                 ]}>
                   {level}
@@ -280,17 +291,6 @@ export default function SignupScreen() {
               Anmelden
             </Text>
           </TouchableOpacity>
-        </View>
-
-        {/* Supabase Integration Note */}
-        <View style={[commonStyles.card, { backgroundColor: colors.highlight }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <Icon name="information-circle" size={20} color={colors.secondary} style={{ marginRight: 8 }} />
-            <Text style={[commonStyles.text, { fontWeight: '600' }]}>Supabase Integration</Text>
-          </View>
-          <Text style={commonStyles.textLight}>
-            Die Registrierung wird später mit Supabase integriert. Derzeit ist dies eine Demo-Version.
-          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>

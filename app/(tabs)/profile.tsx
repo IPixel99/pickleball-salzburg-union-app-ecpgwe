@@ -122,7 +122,23 @@ export default function ProfileScreen() {
 
   const handleOptionPress = (option: string) => {
     console.log('ProfileScreen: Option pressed:', option);
-    Alert.alert('Info', `${option} ist noch nicht verfügbar.`);
+    
+    switch (option) {
+      case 'Profil bearbeiten':
+        router.push('/profile/edit');
+        break;
+      case 'Einstellungen':
+        router.push('/profile/settings');
+        break;
+      case 'Hilfe & Support':
+        router.push('/profile/help');
+        break;
+      case 'Über die App':
+        router.push('/profile/about');
+        break;
+      default:
+        Alert.alert('Info', `${option} ist noch nicht verfügbar.`);
+    }
   };
 
   const getDisplayName = (): string => {

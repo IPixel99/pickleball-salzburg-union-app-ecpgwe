@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Text, View, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import Icon from '../../components/Icon';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -23,6 +24,7 @@ interface Event {
 
 export default function EventsScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -116,6 +118,11 @@ export default function EventsScreen() {
     Alert.alert('Event beitreten', 'Diese Funktion wird bald verfügbar sein!');
   };
 
+  const handleReadMore = (eventId: string) => {
+    console.log('Navigating to event details:', eventId);
+    router.push(`/events/${eventId}`);
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('de-DE', {
@@ -136,6 +143,12 @@ export default function EventsScreen() {
 
   const isNextEvent = (index: number) => {
     return index === 0 && events.length > 0;
+  };
+
+  const truncateDescription = (description: string | null, maxLength: number = 100) => {
+    if (!description) return null;
+    if (description.length <= maxLength) return description;
+    return description.substring(0, maxLength) + '...';
   };
 
   if (loading) {
@@ -260,9 +273,18 @@ export default function EventsScreen() {
                   </View>
                 )}
                 {event.description && (
-                  <Text style={[commonStyles.textLight, { marginTop: 8 }]}>
-                    {event.description}
-                  </Text>
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={[commonStyles.textLight, { marginBottom: 8 }]}>
+                      {truncateDescription(event.description)}
+                    </Text>
+                    {event.description.length > 100 && (
+                      <TouchableOpacity onPress={() => handleReadMore(event.id)}>
+                        <Text style={[commonStyles.text, { color: colors.primary, fontWeight: '600', fontSize: 14 }]}>
+                          Mehr lesen
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 )}
               </View>
 

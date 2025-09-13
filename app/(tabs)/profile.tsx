@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Text, View, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import QRCodeDisplay from '../../components/QRCodeDisplay';
 import Icon from '../../components/Icon';
@@ -27,15 +28,18 @@ export default function ProfileScreen() {
 
   console.log('ProfileScreen: Auth state - loading:', authLoading, 'user:', user?.email || 'No user');
 
-  useEffect(() => {
-    if (!authLoading && user) {
-      console.log('ProfileScreen: Fetching profile for user:', user.id);
-      fetchProfile();
-    } else if (!authLoading && !user) {
-      console.log('ProfileScreen: No user, stopping loading');
-      setLoading(false);
-    }
-  }, [user, authLoading]);
+  // Refresh profile when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!authLoading && user) {
+        console.log('ProfileScreen: Screen focused, fetching profile for user:', user.id);
+        fetchProfile();
+      } else if (!authLoading && !user) {
+        console.log('ProfileScreen: No user, stopping loading');
+        setLoading(false);
+      }
+    }, [user, authLoading])
+  );
 
   const fetchProfile = async () => {
     if (!user) {
@@ -230,6 +234,12 @@ export default function ProfileScreen() {
                 height: 100,
                 borderRadius: 50,
                 marginBottom: 16,
+                backgroundColor: colors.background,
+              }}
+              onError={(error) => {
+                console.log('Error loading avatar image:', error);
+                // Fallback to initials if image fails to load
+                setProfile(prev => prev ? { ...prev, avatar_url: null } : null);
               }}
             />
           ) : (

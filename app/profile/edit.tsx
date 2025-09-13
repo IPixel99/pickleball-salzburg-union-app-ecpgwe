@@ -1,12 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { Text, View, ScrollView, TouchableOpacity, Alert, TextInput, ActivityIndicator } from 'react-native';
+import { Text, View, ScrollView, TouchableOpacity, Alert, TextInput, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../lib/supabase';
 import Icon from '../../components/Icon';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { useAuth } from '../../hooks/useAuth';
+import { uploadProfileImage, deleteProfileImage } from '../../utils/imageUtils';
 
 interface Profile {
   id: string;
@@ -24,11 +26,13 @@ export default function EditProfileScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
     email: '',
   });
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -61,6 +65,7 @@ export default function EditProfileScreen() {
         last_name: data.last_name || '',
         email: data.email || '',
       });
+      setAvatarUrl(data.avatar_url);
     } catch (error) {
       console.error('Error in fetchProfile:', error);
       Alert.alert('Fehler', 'Ein unerwarteter Fehler ist aufgetreten.');
@@ -70,12 +75,142 @@ export default function EditProfileScreen() {
     }
   };
 
+  const pickImage = async () => {
+    try {
+      console.log('Requesting image picker permissions');
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Berechtigung erforderlich', 'Wir benötigen Zugriff auf deine Fotos, um ein Profilbild auszuwählen.');
+        return;
+      }
+
+      console.log('Opening image picker');
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        console.log('Image selected, uploading...');
+        await handleImageUpload(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Fehler', 'Beim Auswählen des Bildes ist ein Fehler aufgetreten.');
+    }
+  };
+
+  const takePhoto = async () => {
+    try {
+      console.log('Requesting camera permissions');
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Berechtigung erforderlich', 'Wir benötigen Zugriff auf deine Kamera, um ein Foto zu machen.');
+        return;
+      }
+
+      console.log('Opening camera');
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        console.log('Photo taken, uploading...');
+        await handleImageUpload(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Fehler', 'Beim Aufnehmen des Fotos ist ein Fehler aufgetreten.');
+    }
+  };
+
+  const handleImageUpload = async (uri: string) => {
+    if (!user) return;
+
+    setUploading(true);
+    try {
+      // Delete old avatar if exists
+      if (avatarUrl) {
+        console.log('Deleting old avatar');
+        await deleteProfileImage(avatarUrl, user.id);
+      }
+
+      // Upload new image
+      const result = await uploadProfileImage(uri, user.id);
+      
+      if (result.success && result.url) {
+        setAvatarUrl(result.url);
+        Alert.alert('Erfolg', 'Profilbild wurde erfolgreich hochgeladen!');
+      } else {
+        Alert.alert('Fehler', result.error || 'Bild konnte nicht hochgeladen werden.');
+      }
+    } catch (error) {
+      console.error('Error in handleImageUpload:', error);
+      Alert.alert('Fehler', 'Beim Hochladen des Bildes ist ein Fehler aufgetreten.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeProfilePicture = async () => {
+    if (!user || !avatarUrl) return;
+
+    Alert.alert(
+      'Profilbild entfernen',
+      'Möchtest du dein Profilbild wirklich entfernen?',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Entfernen',
+          style: 'destructive',
+          onPress: async () => {
+            setUploading(true);
+            try {
+              const success = await deleteProfileImage(avatarUrl, user.id);
+              if (success) {
+                setAvatarUrl(null);
+                Alert.alert('Erfolg', 'Profilbild wurde entfernt.');
+              } else {
+                Alert.alert('Fehler', 'Profilbild konnte nicht entfernt werden.');
+              }
+            } catch (error) {
+              console.error('Error removing profile picture:', error);
+              Alert.alert('Fehler', 'Beim Entfernen des Profilbildes ist ein Fehler aufgetreten.');
+            } finally {
+              setUploading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const showImageOptions = () => {
+    const options = [
+      { text: 'Abbrechen', style: 'cancel' as const },
+      { text: 'Foto aufnehmen', onPress: takePhoto },
+      { text: 'Aus Galerie wählen', onPress: pickImage },
+    ];
+
+    if (avatarUrl) {
+      options.push({ text: 'Profilbild entfernen', onPress: removeProfilePicture });
+    }
+
+    Alert.alert('Profilbild ändern', 'Wie möchtest du dein Profilbild ändern?', options);
+  };
+
   const handleSave = async () => {
     if (!user || !profile) return;
 
     setSaving(true);
     try {
-      console.log('Saving profile changes:', formData);
+      console.log('Saving profile changes:', formData, 'Avatar URL:', avatarUrl);
       
       const { error } = await supabase
         .from('profiles')
@@ -83,6 +218,7 @@ export default function EditProfileScreen() {
           first_name: formData.first_name.trim() || null,
           last_name: formData.last_name.trim() || null,
           email: formData.email.trim() || null,
+          avatar_url: avatarUrl,
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id);
@@ -114,6 +250,19 @@ export default function EditProfileScreen() {
       ...prev,
       [field]: value
     }));
+  };
+
+  const getInitials = (): string => {
+    if (formData.first_name && formData.last_name) {
+      return `${formData.first_name[0]}${formData.last_name[0]}`.toUpperCase();
+    }
+    if (formData.first_name) {
+      return formData.first_name[0].toUpperCase();
+    }
+    if (formData.email) {
+      return formData.email[0].toUpperCase();
+    }
+    return 'U';
   };
 
   if (loading) {
@@ -149,6 +298,72 @@ export default function EditProfileScreen() {
           </TouchableOpacity>
           <Text style={[commonStyles.title, { color: colors.primary, flex: 1 }]}>
             Profil bearbeiten
+          </Text>
+        </View>
+
+        {/* Profile Picture Section */}
+        <View style={{ alignItems: 'center', marginBottom: 30 }}>
+          <TouchableOpacity
+            onPress={showImageOptions}
+            disabled={uploading}
+            style={{
+              position: 'relative',
+              marginBottom: 16,
+            }}
+          >
+            {avatarUrl ? (
+              <Image
+                source={{ uri: avatarUrl }}
+                style={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: 60,
+                  backgroundColor: colors.background,
+                }}
+              />
+            ) : (
+              <View
+                style={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: 60,
+                  backgroundColor: colors.primary,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 48, fontWeight: 'bold', color: colors.white }}>
+                  {getInitials()}
+                </Text>
+              </View>
+            )}
+            
+            {/* Camera Icon Overlay */}
+            <View
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: colors.primary,
+                justifyContent: 'center',
+                alignItems: 'center',
+                borderWidth: 3,
+                borderColor: colors.white,
+              }}
+            >
+              {uploading ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Icon name="camera" size={18} color={colors.white} />
+              )}
+            </View>
+          </TouchableOpacity>
+          
+          <Text style={[commonStyles.textLight, { textAlign: 'center' }]}>
+            Tippe auf das Bild, um es zu ändern
           </Text>
         </View>
 
@@ -233,10 +448,10 @@ export default function EditProfileScreen() {
             style={[
               buttonStyles.primary,
               { width: '100%' },
-              saving && { opacity: 0.7 }
+              (saving || uploading) && { opacity: 0.7 }
             ]}
             onPress={handleSave}
-            disabled={saving}
+            disabled={saving || uploading}
           >
             {saving ? (
               <ActivityIndicator size="small" color={colors.white} />

@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Text, View, ScrollView, TouchableOpacity, Image, RefreshControl, ActivityIndicator } from 'react-native';
-import { commonStyles, colors } from '../../styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from '../../components/Icon';
-import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
+import { supabase } from '../../lib/supabase';
+import Icon from '../../components/Icon';
+import QRCodeDisplay from '../../components/QRCodeDisplay';
+import { commonStyles, colors } from '../../styles/commonStyles';
 import { formatDate, formatTime } from '../../utils/dateUtils';
+import { useAuth } from '../../hooks/useAuth';
 
 interface Profile {
   id: string;
@@ -33,37 +34,41 @@ interface Event {
 }
 
 export default function HomeScreen() {
-  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  console.log('HomeScreen: Auth state - loading:', authLoading, 'user:', user?.email || 'No user');
+
   useEffect(() => {
-    if (user && !authLoading) {
+    if (!authLoading) {
       fetchData();
-    } else if (!authLoading) {
-      setLoading(false);
     }
   }, [user, authLoading]);
 
   const fetchData = async () => {
-    console.log('HomeScreen: Fetching user data and events');
-    try {
-      await Promise.all([fetchProfile(), fetchUpcomingEvents()]);
-    } catch (error) {
-      console.error('HomeScreen: Error fetching data:', error);
-    } finally {
-      setLoading(false);
-    }
+    console.log('HomeScreen: Fetching data');
+    setLoading(true);
+    
+    await Promise.all([
+      fetchProfile(),
+      fetchUpcomingEvents()
+    ]);
+    
+    setLoading(false);
   };
 
   const fetchProfile = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('HomeScreen: No user to fetch profile for');
+      return;
+    }
 
     try {
-      console.log('HomeScreen: Fetching profile for user:', user.id);
+      console.log('HomeScreen: Fetching profile');
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -72,27 +77,32 @@ export default function HomeScreen() {
 
       if (error) {
         console.error('HomeScreen: Error fetching profile:', error);
-        // If profile doesn't exist, create a basic one from user data
+        // If profile doesn't exist, create one
         if (error.code === 'PGRST116') {
-          console.log('HomeScreen: Profile not found, creating basic profile');
-          const basicProfile: Profile = {
-            id: user.id,
-            email: user.email,
-            first_name: user.user_metadata?.first_name || null,
-            last_name: user.user_metadata?.last_name || null,
-            avatar_url: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-          setProfile(basicProfile);
-        }
-        return;
-      }
+          console.log('HomeScreen: Profile not found, creating one');
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: user.id,
+              email: user.email,
+              first_name: user.user_metadata?.first_name || null,
+              last_name: user.user_metadata?.last_name || null,
+            });
 
-      console.log('HomeScreen: Profile fetched:', data);
-      setProfile(data);
+          if (insertError) {
+            console.error('HomeScreen: Error creating profile:', insertError);
+          } else {
+            console.log('HomeScreen: Profile created, fetching again');
+            fetchProfile();
+            return;
+          }
+        }
+      } else {
+        console.log('HomeScreen: Profile fetched successfully');
+        setProfile(data);
+      }
     } catch (error) {
-      console.error('HomeScreen: Profile fetch failed:', error);
+      console.error('HomeScreen: Error in fetchProfile:', error);
     }
   };
 
@@ -116,7 +126,7 @@ export default function HomeScreen() {
       console.log('HomeScreen: Events fetched:', data?.length || 0);
       setUpcomingEvents(data || []);
     } catch (error) {
-      console.error('HomeScreen: Events fetch failed:', error);
+      console.error('HomeScreen: Error in fetchUpcomingEvents:', error);
     }
   };
 
@@ -126,25 +136,38 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
-  const getDisplayName = () => {
-    if (!profile) return 'Gast';
-    
-    if (profile.first_name && profile.last_name) {
+  const getDisplayName = (): string => {
+    if (profile?.first_name && profile?.last_name) {
       return `${profile.first_name} ${profile.last_name}`;
-    } else if (profile.first_name) {
-      return profile.first_name;
-    } else if (profile.email) {
-      return profile.email.split('@')[0];
     }
-    return 'Mitglied';
+    if (profile?.first_name) {
+      return profile.first_name;
+    }
+    if (profile?.email) {
+      return profile.email;
+    }
+    return 'Benutzer';
   };
 
-  const getEventTypeIcon = (type: string) => {
+  const getInitials = (): string => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
+    }
+    if (profile?.first_name) {
+      return profile.first_name[0].toUpperCase();
+    }
+    if (profile?.email) {
+      return profile.email[0].toUpperCase();
+    }
+    return 'U';
+  };
+
+  const getEventTypeIcon = (type: string): string => {
     switch (type) {
-      case 'TOURNAMENT':
-        return 'trophy';
       case 'GAME':
         return 'tennisball';
+      case 'TOURNAMENT':
+        return 'trophy';
       case 'PRACTICE':
         return 'fitness';
       default:
@@ -153,7 +176,8 @@ export default function HomeScreen() {
   };
 
   const handleBookSession = () => {
-    console.log('HomeScreen: Book Session pressed');
+    console.log('HomeScreen: Book session pressed');
+    // Navigate to booking or show info
     router.push('/(tabs)/events');
   };
 
@@ -163,29 +187,28 @@ export default function HomeScreen() {
   };
 
   const handleViewAllEvents = () => {
-    console.log('HomeScreen: View All Events pressed');
+    console.log('HomeScreen: View all events pressed');
     router.push('/(tabs)/events');
   };
 
   const handleBookCourt = () => {
-    console.log('HomeScreen: Book Court pressed');
+    console.log('HomeScreen: Book court pressed');
+    // This could navigate to a court booking system
     router.push('/(tabs)/events');
   };
 
   const handleEventPress = (eventId: string) => {
     console.log('HomeScreen: Event pressed:', eventId);
-    router.push('/(tabs)/events');
+    router.push(`/events/${eventId}`);
   };
 
   if (authLoading || loading) {
     return (
-      <SafeAreaView style={commonStyles.container}>
-        <View style={[commonStyles.centerContent, { justifyContent: 'center' }]}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[commonStyles.text, { marginTop: 16, textAlign: 'center' }]}>
-            Lade Daten...
-          </Text>
-        </View>
+      <SafeAreaView style={[commonStyles.container, commonStyles.centerContent]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[commonStyles.text, { marginTop: 16 }]}>
+          Lade Daten...
+        </Text>
       </SafeAreaView>
     );
   }
@@ -199,237 +222,226 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Welcome Banner */}
-        <View style={styles.welcomeBanner}>
-          <View style={styles.logoContainer}>
-            <Text style={styles.clubText}>CLUB</Text>
+        {/* Header with Profile */}
+        <View style={{ 
+          flexDirection: 'row', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: 30 
+        }}>
+          <View style={{ flex: 1 }}>
+            <Text style={[commonStyles.text, { color: colors.textLight }]}>
+              Willkommen zurück
+            </Text>
+            <Text style={[commonStyles.title, { color: colors.primary }]}>
+              {user ? getDisplayName() : 'Gast'}
+            </Text>
           </View>
-          <View style={styles.welcomeTextContainer}>
-            <Text style={styles.welcomeText}>Welcome back,</Text>
-            <Text style={styles.userName}>{getDisplayName()}</Text>
+          
+          {user && (
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/profile')}
+              style={{ marginLeft: 16 }}
+            >
+              {profile?.avatar_url ? (
+                <Image
+                  source={{ uri: profile.avatar_url }}
+                  style={{
+                    width: 50,
+                    height: 50,
+                    borderRadius: 25,
+                    backgroundColor: colors.background,
+                  }}
+                  onError={(error) => {
+                    console.log('Error loading avatar image in home:', error);
+                    // Fallback to initials if image fails to load
+                    setProfile(prev => prev ? { ...prev, avatar_url: null } : null);
+                  }}
+                />
+              ) : (
+                <View
+                  style={{
+                    width: 50,
+                    height: 50,
+                    borderRadius: 25,
+                    backgroundColor: colors.primary,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.white }}>
+                    {getInitials()}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Quick Actions */}
+        <View style={{ marginBottom: 30 }}>
+          <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+            Schnellzugriff
+          </Text>
+          <View style={{ 
+            flexDirection: 'row', 
+            justifyContent: 'space-between',
+            flexWrap: 'wrap'
+          }}>
+            <TouchableOpacity
+              style={[commonStyles.card, { 
+                width: '48%', 
+                alignItems: 'center', 
+                paddingVertical: 20,
+                marginBottom: 12
+              }]}
+              onPress={handleBookSession}
+            >
+              <Icon name="add-circle" size={32} color={colors.primary} />
+              <Text style={[commonStyles.text, { marginTop: 8, textAlign: 'center' }]}>
+                Session buchen
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[commonStyles.card, { 
+                width: '48%', 
+                alignItems: 'center', 
+                paddingVertical: 20,
+                marginBottom: 12
+              }]}
+              onPress={handleTournaments}
+            >
+              <Icon name="trophy" size={32} color={colors.primary} />
+              <Text style={[commonStyles.text, { marginTop: 8, textAlign: 'center' }]}>
+                Turniere
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[commonStyles.card, { 
+                width: '48%', 
+                alignItems: 'center', 
+                paddingVertical: 20,
+                marginBottom: 12
+              }]}
+              onPress={handleViewAllEvents}
+            >
+              <Icon name="calendar" size={32} color={colors.primary} />
+              <Text style={[commonStyles.text, { marginTop: 8, textAlign: 'center' }]}>
+                Alle Events
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[commonStyles.card, { 
+                width: '48%', 
+                alignItems: 'center', 
+                paddingVertical: 20,
+                marginBottom: 12
+              }]}
+              onPress={handleBookCourt}
+            >
+              <Icon name="location" size={32} color={colors.primary} />
+              <Text style={[commonStyles.text, { marginTop: 8, textAlign: 'center' }]}>
+                Platz buchen
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Quick Action Buttons */}
-        <View style={styles.quickActionsContainer}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleBookSession}>
-            <View style={styles.actionIconContainer}>
-              <Icon name="calendar" size={24} color={colors.primary} />
-            </View>
-            <Text style={styles.actionButtonText}>Book Session</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionButton} onPress={handleTournaments}>
-            <View style={styles.actionIconContainer}>
-              <Icon name="trophy" size={24} color={colors.primary} />
-            </View>
-            <Text style={styles.actionButtonText}>Tournaments</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Upcoming Activities */}
-        <View style={styles.upcomingSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Upcoming Activities</Text>
+        {/* Upcoming Events */}
+        <View style={{ marginBottom: 30 }}>
+          <View style={{ 
+            flexDirection: 'row', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: 16 
+          }}>
+            <Text style={commonStyles.subtitle}>Kommende Events</Text>
             <TouchableOpacity onPress={handleViewAllEvents}>
-              <Text style={styles.viewAllText}>View All</Text>
+              <Text style={[commonStyles.text, { color: colors.primary }]}>
+                Alle anzeigen
+              </Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.activitiesContainer}>
-            {upcomingEvents.length > 0 ? (
-              upcomingEvents.map((event) => (
-                <TouchableOpacity 
-                  key={event.id} 
-                  style={[
-                    styles.eventCard,
-                    upcomingEvents.indexOf(event) === upcomingEvents.length - 1 && styles.lastEventCard
-                  ]}
-                  onPress={() => handleEventPress(event.id)}
-                >
-                  <View style={styles.eventIconContainer}>
-                    <Icon 
-                      name={getEventTypeIcon(event.type)} 
-                      size={20} 
-                      color={colors.primary} 
-                    />
-                  </View>
-                  <View style={styles.eventDetails}>
-                    <Text style={styles.eventTitle}>{event.title}</Text>
-                    <Text style={styles.eventTime}>
+          {upcomingEvents.length > 0 ? (
+            upcomingEvents.map((event, index) => (
+              <TouchableOpacity
+                key={event.id}
+                style={[
+                  commonStyles.card,
+                  { 
+                    marginBottom: 12,
+                    borderLeftWidth: 4,
+                    borderLeftColor: index === 0 ? colors.primary : colors.secondary,
+                  }
+                ]}
+                onPress={() => handleEventPress(event.id)}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Icon 
+                    name={getEventTypeIcon(event.type)} 
+                    size={24} 
+                    color={index === 0 ? colors.primary : colors.secondary} 
+                  />
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                      {event.title}
+                    </Text>
+                    <Text style={[commonStyles.textLight, { fontSize: 14 }]}>
                       {formatDate(event.start_time)} • {formatTime(event.start_time)}
                     </Text>
                     {event.location && (
-                      <Text style={styles.eventLocation}>{event.location}</Text>
+                      <Text style={[commonStyles.textLight, { fontSize: 12 }]}>
+                        📍 {event.location}
+                      </Text>
                     )}
                   </View>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.noActivitiesContainer}>
-                <Text style={styles.noActivitiesText}>No upcoming activities</Text>
-                <TouchableOpacity style={styles.bookCourtButton} onPress={handleBookCourt}>
-                  <Text style={styles.bookCourtButtonText}>Book a Court</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
+                  {index === 0 && (
+                    <View style={{
+                      backgroundColor: colors.primary,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                    }}>
+                      <Text style={{ color: colors.white, fontSize: 12, fontWeight: '600' }}>
+                        Nächstes
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={[commonStyles.card, { alignItems: 'center', paddingVertical: 30 }]}>
+              <Icon name="calendar-outline" size={48} color={colors.textLight} />
+              <Text style={[commonStyles.text, { marginTop: 16, textAlign: 'center' }]}>
+                Keine kommenden Events
+              </Text>
+              <Text style={[commonStyles.textLight, { textAlign: 'center', marginTop: 8 }]}>
+                Schau später wieder vorbei oder erstelle ein neues Event.
+              </Text>
+            </View>
+          )}
         </View>
 
-        {/* Bottom spacing */}
-        <View style={{ height: 20 }} />
+        {/* QR Code Section */}
+        {user && (
+          <View style={{ marginBottom: 30 }}>
+            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+              Dein QR-Code
+            </Text>
+            <View style={[commonStyles.card, { alignItems: 'center', paddingVertical: 30 }]}>
+              <QRCodeDisplay value={user.id} size={200} />
+              <Text style={[commonStyles.textLight, { marginTop: 16, textAlign: 'center' }]}>
+                Zeige diesen Code anderen Mitgliedern, um dich zu vernetzen.
+              </Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = {
-  welcomeBanner: {
-    backgroundColor: colors.primary,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-  },
-  logoContainer: {
-    width: 60,
-    height: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 30,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    marginRight: 16,
-  },
-  clubText: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: '#FFFFFF',
-    textAlign: 'center' as const,
-  },
-  welcomeTextContainer: {
-    flex: 1,
-  },
-  welcomeText: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 4,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: '700' as const,
-    color: '#FFFFFF',
-  },
-  quickActionsContainer: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    marginBottom: 32,
-    gap: 16,
-  },
-  actionButton: {
-    flex: 1,
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center' as const,
-    ...commonStyles.shadow,
-  },
-  actionIconContainer: {
-    width: 60,
-    height: 60,
-    backgroundColor: colors.secondary,
-    borderRadius: 30,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    marginBottom: 12,
-  },
-  actionButtonText: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: colors.text,
-    textAlign: 'center' as const,
-  },
-  upcomingSection: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700' as const,
-    color: colors.text,
-  },
-  viewAllText: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: colors.primary,
-  },
-  activitiesContainer: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 20,
-    ...commonStyles.shadow,
-  },
-  eventCard: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  lastEventCard: {
-    borderBottomWidth: 0,
-  },
-  eventIconContainer: {
-    width: 40,
-    height: 40,
-    backgroundColor: colors.backgroundAlt,
-    borderRadius: 20,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    marginRight: 12,
-  },
-  eventDetails: {
-    flex: 1,
-  },
-  eventTitle: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: colors.text,
-    marginBottom: 4,
-  },
-  eventTime: {
-    fontSize: 14,
-    color: colors.textLight,
-    marginBottom: 2,
-  },
-  eventLocation: {
-    fontSize: 14,
-    color: colors.textLight,
-  },
-  noActivitiesContainer: {
-    alignItems: 'center' as const,
-    paddingVertical: 32,
-  },
-  noActivitiesText: {
-    fontSize: 16,
-    color: colors.textLight,
-    marginBottom: 20,
-    textAlign: 'center' as const,
-  },
-  bookCourtButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  bookCourtButtonText: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: '#FFFFFF',
-  },
-};

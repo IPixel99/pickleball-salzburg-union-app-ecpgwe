@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import Icon from '../../components/Icon';
 import { commonStyles, colors } from '../../styles/commonStyles';
 import QRCodeDisplay from '../../components/QRCodeDisplay';
+import EventRegistrations from '../../components/EventRegistrations';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDate, formatTime } from '../../utils/dateUtils';
@@ -182,6 +183,10 @@ export default function HomeScreen() {
     router.push('/(tabs)/events');
   };
 
+  const handleViewAllRegistrations = () => {
+    router.push('/profile/registrations');
+  };
+
   const handleBookCourt = () => {
     router.push('/(tabs)/events');
   };
@@ -355,6 +360,13 @@ export default function HomeScreen() {
             )}
           </TouchableOpacity>
         </View>
+
+        {/* Event Registrations - Most Important Section */}
+        <EventRegistrations 
+          showAll={false} 
+          limit={3} 
+          onViewAll={handleViewAllRegistrations}
+        />
 
         {/* Quick Actions */}
         <View style={[commonStyles.card, { marginBottom: 30 }]}>

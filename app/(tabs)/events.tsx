@@ -22,10 +22,15 @@ interface Event {
   updated_at: string;
 }
 
+interface EventWithRegistration extends Event {
+  isRegistered: boolean;
+  registrationStatus?: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+}
+
 export default function EventsScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<EventWithRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -49,7 +54,29 @@ export default function EventsScreen() {
       const upcomingEvents = (data || []).filter(event => isEventUpcoming(event.start_time));
       console.log('Filtered upcoming events:', upcomingEvents);
       
-      setEvents(upcomingEvents);
+      // Check registration status for each event if user is logged in
+      if (user) {
+        const eventsWithRegistration = await Promise.all(
+          upcomingEvents.map(async (event) => {
+            const { data: registration } = await supabase
+              .from('event_participants')
+              .select('status')
+              .eq('event_id', event.id)
+              .eq('profile_id', user.id)
+              .single();
+
+            return {
+              ...event,
+              isRegistered: !!registration,
+              registrationStatus: registration?.status
+            };
+          })
+        );
+        
+        setEvents(eventsWithRegistration);
+      } else {
+        setEvents(upcomingEvents.map(event => ({ ...event, isRegistered: false })));
+      }
     } catch (error) {
       console.error('Error in fetchEvents:', error);
       Alert.alert('Fehler', 'Ein unerwarteter Fehler ist aufgetreten.');
@@ -61,7 +88,7 @@ export default function EventsScreen() {
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [user]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -113,9 +140,73 @@ export default function EventsScreen() {
       return;
     }
 
-    console.log('Joining event:', eventId);
-    // TODO: Implement event participation logic
-    Alert.alert('Event beitreten', 'Diese Funktion wird bald verfügbar sein!');
+    try {
+      console.log('Joining event:', eventId);
+      
+      // Check if already registered
+      const { data: existingRegistration } = await supabase
+        .from('event_participants')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('profile_id', user.id)
+        .single();
+
+      if (existingRegistration) {
+        Alert.alert('Bereits angemeldet', 'Du bist bereits für dieses Event angemeldet.');
+        return;
+      }
+
+      // Create new registration
+      const { error } = await supabase
+        .from('event_participants')
+        .insert({
+          event_id: eventId,
+          profile_id: user.id,
+          status: 'PENDING'
+        });
+
+      if (error) {
+        console.error('Error joining event:', error);
+        Alert.alert('Fehler', 'Anmeldung fehlgeschlagen. Bitte versuche es erneut.');
+        return;
+      }
+
+      Alert.alert('Erfolgreich angemeldet!', 'Du hast dich erfolgreich für das Event angemeldet.');
+      
+      // Refresh events to update registration status
+      fetchEvents();
+    } catch (error) {
+      console.error('Error in handleJoinEvent:', error);
+      Alert.alert('Fehler', 'Ein unerwarteter Fehler ist aufgetreten.');
+    }
+  };
+
+  const handleLeaveEvent = async (eventId: string) => {
+    if (!user) return;
+
+    try {
+      console.log('Leaving event:', eventId);
+      
+      const { error } = await supabase
+        .from('event_participants')
+        .delete()
+        .eq('event_id', eventId)
+        .eq('profile_id', user.id);
+
+      if (error) {
+        console.error('Error leaving event:', error);
+        Alert.alert('Fehler', 'Abmeldung fehlgeschlagen. Bitte versuche es erneut.');
+        return;
+      }
+
+      Alert.alert('Erfolgreich abgemeldet!', 'Du hast dich erfolgreich vom Event abgemeldet.');
+      
+      // Refresh events to update registration status
+      fetchEvents();
+    } catch (error) {
+      console.error('Error in handleLeaveEvent:', error);
+      Alert.alert('Fehler', 'Ein unerwarteter Fehler ist aufgetreten.');
+    }
   };
 
   const handleReadMore = (eventId: string) => {
@@ -220,8 +311,28 @@ export default function EventsScreen() {
                 </View>
               )}
 
+              {/* Registration Status Badge */}
+              {event.isRegistered && (
+                <View style={{
+                  position: 'absolute',
+                  top: -8,
+                  left: 16,
+                  backgroundColor: event.registrationStatus === 'ACCEPTED' ? colors.success : 
+                                 event.registrationStatus === 'DECLINED' ? colors.error : colors.yellow,
+                  paddingHorizontal: 12,
+                  paddingVertical: 4,
+                  borderRadius: 12,
+                  zIndex: 1,
+                }}>
+                  <Text style={[commonStyles.text, { color: colors.white, fontSize: 12, fontWeight: '600' }]}>
+                    {event.registrationStatus === 'ACCEPTED' ? 'Bestätigt' : 
+                     event.registrationStatus === 'DECLINED' ? 'Abgelehnt' : 'Angemeldet'}
+                  </Text>
+                </View>
+              )}
+
               {/* Event Header */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, marginTop: event.isRegistered ? 12 : 0 }}>
                 <View style={{
                   width: 40,
                   height: 40,
@@ -288,19 +399,53 @@ export default function EventsScreen() {
                 )}
               </View>
 
-              {/* Join Button */}
-              <TouchableOpacity
-                style={[
-                  buttonStyles.primary, 
-                  { width: '100%' },
-                  isNextEvent(index) && { backgroundColor: colors.primary }
-                ]}
-                onPress={() => handleJoinEvent(event.id)}
-              >
-                <Text style={commonStyles.buttonTextWhite}>
-                  {isNextEvent(index) ? 'Jetzt teilnehmen' : 'Teilnehmen'}
-                </Text>
-              </TouchableOpacity>
+              {/* Action Buttons */}
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  style={[
+                    buttonStyles.secondary,
+                    { flex: 1 }
+                  ]}
+                  onPress={() => handleReadMore(event.id)}
+                >
+                  <Text style={[commonStyles.text, { color: colors.primary, fontWeight: '600' }]}>
+                    Details
+                  </Text>
+                </TouchableOpacity>
+
+                {user && (
+                  event.isRegistered ? (
+                    <TouchableOpacity
+                      style={[
+                        buttonStyles.primary,
+                        { 
+                          flex: 1,
+                          backgroundColor: colors.error,
+                          borderColor: colors.error,
+                        }
+                      ]}
+                      onPress={() => handleLeaveEvent(event.id)}
+                    >
+                      <Text style={[commonStyles.buttonTextWhite]}>
+                        Abmelden
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={[
+                        buttonStyles.primary, 
+                        { flex: 1 },
+                        isNextEvent(index) && { backgroundColor: colors.primary }
+                      ]}
+                      onPress={() => handleJoinEvent(event.id)}
+                    >
+                      <Text style={commonStyles.buttonTextWhite}>
+                        {isNextEvent(index) ? 'Jetzt teilnehmen' : 'Teilnehmen'}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                )}
+              </View>
             </View>
           ))
         )}

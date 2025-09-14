@@ -48,6 +48,10 @@ export default function SettingsScreen() {
     router.push('/test-supabase');
   };
 
+  const handleTestMembership = () => {
+    router.push('/test-membership');
+  };
+
   const settingsOptions = [
     {
       title: 'Benachrichtigungen',
@@ -78,6 +82,13 @@ export default function SettingsScreen() {
       icon: 'database',
       type: 'action',
       onPress: handleTestSupabase,
+    },
+    {
+      title: 'Membership Test',
+      subtitle: 'Teste die Mitgliedschafts-Funktionalität',
+      icon: 'users',
+      type: 'action',
+      onPress: handleTestMembership,
     },
     {
       title: 'Datenschutz',

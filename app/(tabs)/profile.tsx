@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 import QRCodeDisplay from '../../components/QRCodeDisplay';
-import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
+import { commonStyles, colors, buttonStyles, buttonTextStyles } from '../../styles/commonStyles';
 
 interface Profile {
   id: string;
@@ -20,8 +20,21 @@ interface Profile {
   updated_at: string;
 }
 
+interface MembershipInfo {
+  memberships: Array<{
+    type: 'summer_season' | 'ten_block' | 'pay_by_play';
+    credits?: number;
+    displayName: string;
+  }>;
+  primaryMembership: string;
+}
+
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [membershipInfo, setMembershipInfo] = useState<MembershipInfo>({ 
+    memberships: [], 
+    primaryMembership: 'Keine Mitgliedschaft' 
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [showQR, setShowQR] = useState(false);
 
@@ -32,6 +45,7 @@ export default function ProfileScreen() {
     React.useCallback(() => {
       if (user) {
         fetchProfile();
+        fetchMembershipInfo();
       } else {
         setIsLoading(false);
       }
@@ -90,6 +104,90 @@ export default function ProfileScreen() {
     }
   };
 
+  const fetchMembershipInfo = async () => {
+    if (!user) return;
+
+    try {
+      console.log('Fetching membership info for user:', user.id);
+      const memberships: Array<{
+        type: 'summer_season' | 'ten_block' | 'pay_by_play';
+        credits?: number;
+        displayName: string;
+      }> = [];
+
+      // Check summer_season_members
+      const { data: summerData, error: summerError } = await supabase
+        .from('summer_season_members')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (summerData && !summerError) {
+        console.log('Found summer season membership:', summerData);
+        memberships.push({
+          type: 'summer_season',
+          displayName: 'Wintermembership'
+        });
+      }
+
+      // Check ten_block_membership
+      const { data: tenBlockData, error: tenBlockError } = await supabase
+        .from('ten_block_membership')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (tenBlockData && !tenBlockError) {
+        console.log('Found ten block membership:', tenBlockData);
+        memberships.push({
+          type: 'ten_block',
+          credits: Number(tenBlockData.credits) || 0,
+          displayName: 'Zehner Block'
+        });
+      }
+
+      // Check pay_by_play_members
+      const { data: payByPlayData, error: payByPlayError } = await supabase
+        .from('pay_by_play_members')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (payByPlayData && !payByPlayError) {
+        console.log('Found pay by play membership:', payByPlayData);
+        memberships.push({
+          type: 'pay_by_play',
+          displayName: 'Pay by Play'
+        });
+      }
+
+      // Set membership info
+      if (memberships.length > 0) {
+        const primaryMembership = memberships.length === 1 
+          ? memberships[0].displayName 
+          : `${memberships.length} aktive Mitgliedschaften`;
+        
+        setMembershipInfo({
+          memberships,
+          primaryMembership
+        });
+      } else {
+        console.log('No membership found for user');
+        setMembershipInfo({
+          memberships: [],
+          primaryMembership: 'Keine Mitgliedschaft'
+        });
+      }
+
+    } catch (error) {
+      console.error('Error fetching membership info:', error);
+      setMembershipInfo({
+        memberships: [],
+        primaryMembership: 'Fehler beim Laden'
+      });
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert(
       'Abmelden',
@@ -143,6 +241,90 @@ export default function ProfileScreen() {
     }
   };
 
+  const fetchMembershipInfo = async () => {
+    if (!user) return;
+
+    try {
+      console.log('Fetching membership info for user:', user.id);
+      const memberships: Array<{
+        type: 'summer_season' | 'ten_block' | 'pay_by_play';
+        credits?: number;
+        displayName: string;
+      }> = [];
+
+      // Check summer_season_members
+      const { data: summerData, error: summerError } = await supabase
+        .from('summer_season_members')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (summerData && !summerError) {
+        console.log('Found summer season membership:', summerData);
+        memberships.push({
+          type: 'summer_season',
+          displayName: 'Wintermembership'
+        });
+      }
+
+      // Check ten_block_membership
+      const { data: tenBlockData, error: tenBlockError } = await supabase
+        .from('ten_block_membership')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (tenBlockData && !tenBlockError) {
+        console.log('Found ten block membership:', tenBlockData);
+        memberships.push({
+          type: 'ten_block',
+          credits: Number(tenBlockData.credits) || 0,
+          displayName: 'Zehner Block'
+        });
+      }
+
+      // Check pay_by_play_members
+      const { data: payByPlayData, error: payByPlayError } = await supabase
+        .from('pay_by_play_members')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (payByPlayData && !payByPlayError) {
+        console.log('Found pay by play membership:', payByPlayData);
+        memberships.push({
+          type: 'pay_by_play',
+          displayName: 'Pay by Play'
+        });
+      }
+
+      // Set membership info
+      if (memberships.length > 0) {
+        const primaryMembership = memberships.length === 1 
+          ? memberships[0].displayName 
+          : `${memberships.length} aktive Mitgliedschaften`;
+        
+        setMembershipInfo({
+          memberships,
+          primaryMembership
+        });
+      } else {
+        console.log('No membership found for user');
+        setMembershipInfo({
+          memberships: [],
+          primaryMembership: 'Keine Mitgliedschaft'
+        });
+      }
+
+    } catch (error) {
+      console.error('Error fetching membership info:', error);
+      setMembershipInfo({
+        memberships: [],
+        primaryMembership: 'Fehler beim Laden'
+      });
+    }
+  };
+
   const getDisplayName = () => {
     if (profile?.first_name || profile?.last_name) {
       return `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
@@ -179,11 +361,11 @@ export default function ProfileScreen() {
           </Text>
           
           <TouchableOpacity style={[buttonStyles.primary, { marginBottom: 15 }]} onPress={handleLogin}>
-            <Text style={buttonStyles.primaryText}>Anmelden</Text>
+            <Text style={buttonTextStyles.primaryText}>Anmelden</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={buttonStyles.secondary} onPress={handleSignup}>
-            <Text style={buttonStyles.secondaryText}>Registrieren</Text>
+            <Text style={buttonTextStyles.secondaryText}>Registrieren</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -244,6 +426,125 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
+        {/* Membership Info */}
+        <View style={commonStyles.card}>
+          <Text style={[commonStyles.subtitle, { marginBottom: 15 }]}>
+            Mitgliedschaft
+          </Text>
+          
+          {membershipInfo.memberships.length > 0 ? (
+            <>
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 10,
+                marginBottom: membershipInfo.memberships.length > 1 ? 15 : 0,
+              }}>
+                <View style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: colors.success + '20',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginRight: 15,
+                }}>
+                  <Icon 
+                    name="check-circle" 
+                    size={20} 
+                    color={colors.success} 
+                  />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                    {membershipInfo.primaryMembership}
+                  </Text>
+                  <Text style={[commonStyles.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                    {membershipInfo.memberships.length === 1 ? 'Aktive Mitgliedschaft' : 'Mehrere aktive Mitgliedschaften'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Individual Memberships */}
+              {membershipInfo.memberships.map((membership, index) => (
+                <View 
+                  key={membership.type}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 8,
+                    paddingLeft: 20,
+                    borderTopWidth: index === 0 && membershipInfo.memberships.length > 1 ? 1 : 0,
+                    borderTopColor: colors.border,
+                    marginTop: index === 0 && membershipInfo.memberships.length > 1 ? 10 : 0,
+                  }}
+                >
+                  <View style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: colors.primary,
+                    marginRight: 12,
+                  }} />
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '500' }]}>
+                      {membership.displayName}
+                    </Text>
+                    {membership.type === 'ten_block' && membership.credits !== undefined && (
+                      <Text style={[commonStyles.caption, { color: colors.textSecondary, marginTop: 1 }]}>
+                        {membership.credits} Credits übrig
+                      </Text>
+                    )}
+                    {membership.type === 'summer_season' && (
+                      <Text style={[commonStyles.caption, { color: colors.textSecondary, marginTop: 1 }]}>
+                        Saisonmitgliedschaft
+                      </Text>
+                    )}
+                    {membership.type === 'pay_by_play' && (
+                      <Text style={[commonStyles.caption, { color: colors.textSecondary, marginTop: 1 }]}>
+                        Bezahlung pro Spiel
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </>
+          ) : (
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingVertical: 10,
+            }}>
+              <View style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: colors.textSecondary + '20',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 15,
+              }}>
+                <Icon 
+                  name="x-circle" 
+                  size={20} 
+                  color={colors.textSecondary} 
+                />
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                  {membershipInfo.primaryMembership}
+                </Text>
+                <Text style={[commonStyles.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                  Keine aktive Mitgliedschaft gefunden
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+
         {/* Profile Options */}
         <View style={commonStyles.card}>
           <Text style={[commonStyles.subtitle, { marginBottom: 20 }]}>
@@ -294,7 +595,7 @@ export default function ProfileScreen() {
           onPress={handleLogout}
         >
           <Icon name="log-out" size={20} color="white" style={{ marginRight: 10 }} />
-          <Text style={buttonStyles.dangerText}>Abmelden</Text>
+          <Text style={buttonTextStyles.dangerText}>Abmelden</Text>
         </TouchableOpacity>
       </ScrollView>
 

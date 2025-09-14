@@ -9,6 +9,7 @@ export const colors = {
   surface: '#F8F9FA',
   text: '#2C3E50',
   textLight: '#7F8C8D',
+  textSecondary: '#7F8C8D',
   border: '#E9ECEF',
   success: '#27AE60',
   warning: '#F39C12',
@@ -63,6 +64,17 @@ export const commonStyles = StyleSheet.create({
     color: colors.textLight,
     lineHeight: 20,
   } as TextStyle,
+  
+  caption: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 16,
+  } as TextStyle,
+  
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  } as ViewStyle,
   
   card: {
     backgroundColor: colors.surface,
@@ -175,4 +187,46 @@ export const buttonStyles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
   } as ViewStyle,
+  
+  danger: {
+    backgroundColor: colors.error,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    shadowColor: colors.error,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  } as ViewStyle,
+});
+
+// Add text styles for buttons
+export const buttonTextStyles = StyleSheet.create({
+  primaryText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  } as TextStyle,
+  
+  secondaryText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  } as TextStyle,
+  
+  dangerText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  } as TextStyle,
 });

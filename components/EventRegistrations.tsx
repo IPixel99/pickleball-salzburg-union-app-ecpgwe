@@ -73,8 +73,7 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
             type
           )
         `)
-        .eq('profile_id', user.id)
-        .order('events.start_time', { ascending: true });
+        .eq('profile_id', user.id);
 
       if (!showAll) {
         query = query.limit(limit);
@@ -100,7 +99,7 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
   };
 
   const processRegistrations = (data: any[]) => {
-    // Filter to show only upcoming events
+    // Filter to show only upcoming events and sort by start_time
     const upcomingRegistrations = data
       .filter(reg => {
         const isUpcoming = isEventUpcoming(reg.events.start_time);
@@ -114,7 +113,11 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
         status: reg.status || 'PENDING',
         created_at: reg.created_at,
         events: reg.events
-      }));
+      }))
+      .sort((a, b) => {
+        // Sort by event start_time ascending
+        return new Date(a.events.start_time).getTime() - new Date(b.events.start_time).getTime();
+      });
 
     console.log('Processed upcoming registrations:', upcomingRegistrations);
     setRegistrations(upcomingRegistrations);

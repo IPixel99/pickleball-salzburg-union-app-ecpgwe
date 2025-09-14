@@ -310,7 +310,7 @@ export default function HomeScreen() {
         }
       >
         {/* Header with Profile */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 30 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
           <View style={{ flex: 1 }}>
             <Text style={[commonStyles.title, { color: colors.primary }]}>
               Hallo {getDisplayName()}!
@@ -357,15 +357,18 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Event Registrations - Most Important Section */}
-        <EventRegistrations 
-          showAll={false} 
-          limit={3} 
-          onViewAll={handleViewAllRegistrations}
-        />
+        {/* Event Registrations - Compact Version */}
+        <View style={{ marginBottom: 20 }}>
+          <EventRegistrations 
+            showAll={false} 
+            limit={2} 
+            compact={true}
+            onViewAll={handleViewAllRegistrations}
+          />
+        </View>
 
-        {/* Quick Actions - Removed "Platz buchen" */}
-        <View style={[commonStyles.card, { marginBottom: 30 }]}>
+        {/* Quick Actions */}
+        <View style={[commonStyles.card, { marginBottom: 20 }]}>
           <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16 }]}>
             Schnellzugriff
           </Text>
@@ -408,7 +411,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Upcoming Events */}
-        <View style={[commonStyles.card, { marginBottom: 30 }]}>
+        <View style={[commonStyles.card, { marginBottom: 20 }]}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <Text style={[commonStyles.text, { fontWeight: '600' }]}>
               Kommende Events
@@ -474,7 +477,7 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* QR Code - Now Collapsible */}
+        {/* QR Code - Collapsible */}
         <View style={[commonStyles.card, { marginBottom: 30 }]}>
           <QRCodeDisplay userId={user.id} collapsible={true} />
         </View>

@@ -175,8 +175,8 @@ export default function HomeScreen() {
     router.push('/(tabs)/events');
   };
 
-  const handleTournaments = () => {
-    router.push('/(tabs)/events');
+  const handleMyRegistrations = () => {
+    router.push('/profile/registrations');
   };
 
   const handleViewAllEvents = () => {
@@ -286,11 +286,11 @@ export default function HomeScreen() {
                   borderRadius: 12,
                   marginLeft: 8,
                 }}
-                onPress={handleTournaments}
+                onPress={handleMyRegistrations}
               >
-                <Icon name="trophy" size={32} color={colors.primary} />
+                <Icon name="list" size={32} color={colors.primary} />
                 <Text style={[commonStyles.text, { marginTop: 8, fontSize: 12, textAlign: 'center' }]}>
-                  Turniere
+                  Meine Anmeldungen
                 </Text>
               </TouchableOpacity>
             </View>
@@ -357,11 +357,11 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Event Registrations - Compact Version */}
+        {/* My Registrations Quick Access - Show max 3 upcoming events */}
         <View style={{ marginBottom: 20 }}>
           <EventRegistrations 
             showAll={false} 
-            limit={2} 
+            limit={3} 
             compact={true}
             onViewAll={handleViewAllRegistrations}
           />
@@ -400,11 +400,11 @@ export default function HomeScreen() {
                 borderRadius: 12,
                 marginLeft: 8,
               }}
-              onPress={handleTournaments}
+              onPress={handleMyRegistrations}
             >
-              <Icon name="trophy" size={32} color={colors.primary} />
+              <Icon name="list" size={32} color={colors.primary} />
               <Text style={[commonStyles.text, { marginTop: 8, fontSize: 12, textAlign: 'center' }]}>
-                Turniere
+                Meine Anmeldungen
               </Text>
             </TouchableOpacity>
           </View>

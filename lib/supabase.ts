@@ -86,6 +86,32 @@ export type Database = {
           updated_at?: string;
         };
       };
+      event_participants: {
+        Row: {
+          id: string;
+          event_id: string;
+          profile_id: string;
+          status: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          profile_id: string;
+          status?: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          profile_id?: string;
+          status?: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       news_posts: {
         Row: {
           id: string;

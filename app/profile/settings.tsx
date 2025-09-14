@@ -5,6 +5,7 @@ import Icon from '../../components/Icon';
 import SupabaseConnectionTest from '../../components/SupabaseConnectionTest';
 import StorageSetup from '../../components/StorageSetup';
 import AvatarUploadTest from '../../components/AvatarUploadTest';
+import EventRegistrationsTest from '../../components/EventRegistrationsTest';
 import { Text, View, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -135,6 +136,9 @@ export default function SettingsScreen() {
 
         {/* Avatar Test */}
         <AvatarUploadTest />
+
+        {/* Event Registrations Test */}
+        <EventRegistrationsTest />
 
         <View style={commonStyles.card}>
           <Text style={[commonStyles.subtitle, { marginBottom: 20 }]}>

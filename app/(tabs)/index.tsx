@@ -7,6 +7,7 @@ import Icon from '../../components/Icon';
 import { commonStyles, colors } from '../../styles/commonStyles';
 import QRCodeDisplay from '../../components/QRCodeDisplay';
 import EventRegistrations from '../../components/EventRegistrations';
+import EventRegistrationsDebug from '../../components/EventRegistrationsDebug';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDate, formatTime } from '../../utils/dateUtils';
@@ -360,6 +361,9 @@ export default function HomeScreen() {
             )}
           </TouchableOpacity>
         </View>
+
+        {/* Debug Component - Remove this after testing */}
+        <EventRegistrationsDebug />
 
         {/* Event Registrations - Most Important Section */}
         <EventRegistrations 

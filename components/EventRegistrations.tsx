@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import Icon from './Icon';
 import { supabase } from '../lib/supabase';
@@ -11,9 +11,10 @@ import { formatDate, formatTime, isEventUpcoming } from '../utils/dateUtils';
 interface EventRegistration {
   id: string;
   event_id: string;
-  status: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+  user_id: string;
+  status?: 'PENDING' | 'ACCEPTED' | 'DECLINED';
   created_at: string;
-  event: {
+  events: {
     id: string;
     title: string;
     description: string | null;
@@ -49,11 +50,13 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
     try {
       console.log('Fetching event registrations for user:', user.id);
       
+      // First, let's try with user_id field
       let query = supabase
         .from('event_participants')
         .select(`
           id,
           event_id,
+          user_id,
           status,
           created_at,
           events!inner (
@@ -66,7 +69,7 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
             type
           )
         `)
-        .eq('profile_id', user.id)
+        .eq('user_id', user.id)
         .order('events.start_time', { ascending: true });
 
       if (!showAll) {
@@ -77,29 +80,72 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
 
       if (error) {
         console.error('Error fetching event registrations:', error);
+        // If user_id doesn't work, try with profile_id
+        if (error.message?.includes('user_id')) {
+          console.log('Trying with profile_id instead...');
+          let fallbackQuery = supabase
+            .from('event_participants')
+            .select(`
+              id,
+              event_id,
+              profile_id,
+              status,
+              created_at,
+              events!inner (
+                id,
+                title,
+                description,
+                start_time,
+                end_time,
+                location,
+                type
+              )
+            `)
+            .eq('profile_id', user.id)
+            .order('events.start_time', { ascending: true });
+
+          if (!showAll) {
+            fallbackQuery = fallbackQuery.limit(limit);
+          }
+
+          const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+          
+          if (fallbackError) {
+            console.error('Error with fallback query:', fallbackError);
+            return;
+          }
+          
+          console.log('Fetched registrations with profile_id:', fallbackData);
+          processRegistrations(fallbackData || []);
+          return;
+        }
         return;
       }
 
-      console.log('Fetched registrations:', data);
-      
-      // Filter to show only upcoming events
-      const upcomingRegistrations = (data || [])
-        .filter(reg => isEventUpcoming(reg.events.start_time))
-        .map(reg => ({
-          id: reg.id,
-          event_id: reg.event_id,
-          status: reg.status,
-          created_at: reg.created_at,
-          event: reg.events
-        }));
-
-      setRegistrations(upcomingRegistrations);
+      console.log('Fetched registrations with user_id:', data);
+      processRegistrations(data || []);
     } catch (error) {
       console.error('Error in fetchRegistrations:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+
+  const processRegistrations = (data: any[]) => {
+    // Filter to show only upcoming events
+    const upcomingRegistrations = data
+      .filter(reg => isEventUpcoming(reg.events.start_time))
+      .map(reg => ({
+        id: reg.id,
+        event_id: reg.event_id,
+        user_id: reg.user_id || reg.profile_id,
+        status: reg.status || 'PENDING',
+        created_at: reg.created_at,
+        events: reg.events
+      }));
+
+    setRegistrations(upcomingRegistrations);
   };
 
   const onRefresh = () => {
@@ -125,11 +171,24 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
       case 'GAME':
         return colors.primary;
       case 'TOURNAMENT':
-        return colors.yellow;
+        return '#FFD700';
       case 'PRACTICE':
         return colors.success;
       default:
         return colors.textLight;
+    }
+  };
+
+  const getEventTypeLabel = (type: string): string => {
+    switch (type) {
+      case 'GAME':
+        return 'Spiel';
+      case 'TOURNAMENT':
+        return 'Turnier';
+      case 'PRACTICE':
+        return 'Training';
+      default:
+        return type;
     }
   };
 
@@ -140,7 +199,7 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
       case 'DECLINED':
         return colors.error;
       case 'PENDING':
-        return colors.yellow;
+        return '#FFD700';
       default:
         return colors.textLight;
     }
@@ -163,33 +222,51 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
     router.push(`/events/${eventId}`);
   };
 
-  const handleCancelRegistration = async (registrationId: string) => {
-    try {
-      console.log('Cancelling registration:', registrationId);
-      
-      const { error } = await supabase
-        .from('event_participants')
-        .delete()
-        .eq('id', registrationId)
-        .eq('profile_id', user?.id);
+  const handleCancelRegistration = async (registrationId: string, eventTitle: string) => {
+    Alert.alert(
+      'Anmeldung stornieren',
+      `Möchtest du deine Anmeldung für "${eventTitle}" wirklich stornieren?`,
+      [
+        {
+          text: 'Abbrechen',
+          style: 'cancel',
+        },
+        {
+          text: 'Stornieren',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('Cancelling registration:', registrationId);
+              
+              const { error } = await supabase
+                .from('event_participants')
+                .delete()
+                .eq('id', registrationId);
 
-      if (error) {
-        console.error('Error cancelling registration:', error);
-        return;
-      }
+              if (error) {
+                console.error('Error cancelling registration:', error);
+                Alert.alert('Fehler', 'Die Anmeldung konnte nicht storniert werden.');
+                return;
+              }
 
-      // Refresh the list
-      fetchRegistrations();
-    } catch (error) {
-      console.error('Error in handleCancelRegistration:', error);
-    }
+              Alert.alert('Erfolg', 'Deine Anmeldung wurde erfolgreich storniert.');
+              // Refresh the list
+              fetchRegistrations();
+            } catch (error) {
+              console.error('Error in handleCancelRegistration:', error);
+              Alert.alert('Fehler', 'Ein unerwarteter Fehler ist aufgetreten.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
     return (
-      <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
-        <ActivityIndicator size="small" color={colors.primary} />
-        <Text style={[commonStyles.textLight, { marginTop: 8 }]}>
+      <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[commonStyles.textLight, { marginTop: 16, fontSize: 16 }]}>
           Anmeldungen werden geladen...
         </Text>
       </View>
@@ -198,24 +275,39 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
 
   if (registrations.length === 0) {
     return (
-      <View style={[commonStyles.card, { alignItems: 'center', padding: 30 }]}>
-        <Icon name="calendar" size={48} color={colors.textLight} />
-        <Text style={[commonStyles.text, { marginTop: 16, marginBottom: 8, textAlign: 'center' }]}>
+      <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
+        <View
+          style={{
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            backgroundColor: colors.background,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: 20,
+          }}
+        >
+          <Icon name="calendar" size={40} color={colors.textLight} />
+        </View>
+        <Text style={[commonStyles.text, { fontSize: 18, fontWeight: '600', marginBottom: 8, textAlign: 'center' }]}>
           Keine Event-Anmeldungen
         </Text>
-        <Text style={[commonStyles.textLight, { textAlign: 'center' }]}>
-          Du bist noch für keine kommenden Events angemeldet.
+        <Text style={[commonStyles.textLight, { textAlign: 'center', marginBottom: 24, lineHeight: 20 }]}>
+          Du bist noch für keine kommenden Events angemeldet.{'\n'}
+          Entdecke spannende Events und melde dich an!
         </Text>
         <TouchableOpacity
           style={{
             backgroundColor: colors.primary,
-            paddingHorizontal: 20,
-            paddingVertical: 10,
-            borderRadius: 8,
-            marginTop: 16,
+            paddingHorizontal: 24,
+            paddingVertical: 12,
+            borderRadius: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
           }}
           onPress={() => router.push('/(tabs)/events')}
         >
+          <Icon name="search" size={16} color={colors.white} style={{ marginRight: 8 }} />
           <Text style={[commonStyles.text, { color: colors.white, fontWeight: '600' }]}>
             Events entdecken
           </Text>
@@ -227,15 +319,31 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
   const content = (
     <>
       {/* Header */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Text style={[commonStyles.text, { fontWeight: '600', fontSize: 18 }]}>
-          Meine Anmeldungen
-        </Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <View>
+          <Text style={[commonStyles.text, { fontWeight: '700', fontSize: 20, color: colors.primary }]}>
+            Meine Anmeldungen
+          </Text>
+          <Text style={[commonStyles.textLight, { fontSize: 14, marginTop: 2 }]}>
+            {registrations.length} kommende{registrations.length === 1 ? 's' : ''} Event{registrations.length === 1 ? '' : 's'}
+          </Text>
+        </View>
         {!showAll && onViewAll && registrations.length >= limit && (
-          <TouchableOpacity onPress={onViewAll}>
-            <Text style={[commonStyles.text, { color: colors.primary, fontSize: 14 }]}>
-              Alle anzeigen
+          <TouchableOpacity
+            onPress={onViewAll}
+            style={{
+              backgroundColor: colors.background,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+          >
+            <Text style={[commonStyles.text, { color: colors.primary, fontSize: 14, fontWeight: '600', marginRight: 4 }]}>
+              Alle
             </Text>
+            <Icon name="chevron-forward" size={14} color={colors.primary} />
           </TouchableOpacity>
         )}
       </View>
@@ -246,47 +354,66 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
           key={registration.id}
           style={{
             backgroundColor: colors.white,
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 12,
+            borderRadius: 16,
+            padding: 20,
+            marginBottom: 16,
             borderLeftWidth: 4,
-            borderLeftColor: getEventTypeColor(registration.event.type),
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            borderLeftColor: getEventTypeColor(registration.events.type),
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            elevation: 3,
           }}
-          onPress={() => handleEventPress(registration.event.id)}
+          onPress={() => handleEventPress(registration.events.id)}
+          activeOpacity={0.7}
         >
           {/* Event Header */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 }}>
             <View
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: getEventTypeColor(registration.event.type),
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                backgroundColor: getEventTypeColor(registration.events.type),
                 justifyContent: 'center',
                 alignItems: 'center',
-                marginRight: 12,
+                marginRight: 16,
               }}
             >
-              <Icon name={getEventTypeIcon(registration.event.type)} size={20} color={colors.white} />
+              <Icon name={getEventTypeIcon(registration.events.type)} size={24} color={colors.white} />
             </View>
             
             <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 2 }]}>
-                {registration.event.title}
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                <Text style={[commonStyles.text, { fontWeight: '700', fontSize: 16, flex: 1 }]}>
+                  {registration.events.title}
+                </Text>
                 <View
                   style={{
-                    backgroundColor: getStatusColor(registration.status),
+                    backgroundColor: getEventTypeColor(registration.events.type),
                     paddingHorizontal: 8,
                     paddingVertical: 2,
-                    borderRadius: 10,
-                    marginRight: 8,
+                    borderRadius: 12,
+                    marginLeft: 8,
                   }}
                 >
                   <Text style={[commonStyles.text, { color: colors.white, fontSize: 10, fontWeight: '600' }]}>
-                    {getStatusText(registration.status)}
+                    {getEventTypeLabel(registration.events.type)}
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                <View
+                  style={{
+                    backgroundColor: getStatusColor(registration.status || 'PENDING'),
+                    paddingHorizontal: 10,
+                    paddingVertical: 3,
+                    borderRadius: 12,
+                    marginRight: 8,
+                    marginBottom: 4,
+                  }}
+                >
+                  <Text style={[commonStyles.text, { color: colors.white, fontSize: 11, fontWeight: '600' }]}>
+                    {getStatusText(registration.status || 'PENDING')}
                   </Text>
                 </View>
                 <Text style={[commonStyles.textLight, { fontSize: 12 }]}>
@@ -297,26 +424,62 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
           </View>
 
           {/* Event Details */}
-          <View style={{ marginBottom: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <Icon name="calendar" size={14} color={colors.textLight} style={{ marginRight: 8 }} />
-              <Text style={[commonStyles.textLight, { fontSize: 14 }]}>
-                {formatDate(registration.event.start_time)}
+          <View style={{ marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <View
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: colors.background,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginRight: 12,
+                }}
+              >
+                <Icon name="calendar" size={16} color={colors.primary} />
+              </View>
+              <Text style={[commonStyles.text, { fontSize: 15, fontWeight: '600' }]}>
+                {formatDate(registration.events.start_time)}
               </Text>
             </View>
             
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <Icon name="time" size={14} color={colors.textLight} style={{ marginRight: 8 }} />
-              <Text style={[commonStyles.textLight, { fontSize: 14 }]}>
-                {formatTime(registration.event.start_time)} - {formatTime(registration.event.end_time)}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <View
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: colors.background,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginRight: 12,
+                }}
+              >
+                <Icon name="time" size={16} color={colors.primary} />
+              </View>
+              <Text style={[commonStyles.text, { fontSize: 15 }]}>
+                {formatTime(registration.events.start_time)} - {formatTime(registration.events.end_time)}
               </Text>
             </View>
             
-            {registration.event.location && (
+            {registration.events.location && (
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Icon name="location" size={14} color={colors.textLight} style={{ marginRight: 8 }} />
-                <Text style={[commonStyles.textLight, { fontSize: 14, flex: 1 }]} numberOfLines={2}>
-                  {registration.event.location}
+                <View
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: colors.background,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: 12,
+                  }}
+                >
+                  <Icon name="location" size={16} color={colors.primary} />
+                </View>
+                <Text style={[commonStyles.text, { fontSize: 15, flex: 1 }]} numberOfLines={2}>
+                  {registration.events.location}
                 </Text>
               </View>
             )}
@@ -326,39 +489,39 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <TouchableOpacity
               style={{
-                backgroundColor: colors.background,
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 6,
+                backgroundColor: colors.primary,
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                borderRadius: 8,
                 flexDirection: 'row',
                 alignItems: 'center',
+                flex: 1,
+                marginRight: 8,
               }}
-              onPress={() => handleEventPress(registration.event.id)}
+              onPress={() => handleEventPress(registration.events.id)}
             >
-              <Icon name="information-circle" size={14} color={colors.primary} style={{ marginRight: 4 }} />
-              <Text style={[commonStyles.text, { color: colors.primary, fontSize: 12, fontWeight: '600' }]}>
-                Details
+              <Icon name="information-circle" size={16} color={colors.white} style={{ marginRight: 6 }} />
+              <Text style={[commonStyles.text, { color: colors.white, fontSize: 14, fontWeight: '600' }]}>
+                Details ansehen
               </Text>
             </TouchableOpacity>
 
-            {registration.status === 'PENDING' && (
-              <TouchableOpacity
-                style={{
-                  backgroundColor: colors.error,
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 6,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                }}
-                onPress={() => handleCancelRegistration(registration.id)}
-              >
-                <Icon name="close" size={14} color={colors.white} style={{ marginRight: 4 }} />
-                <Text style={[commonStyles.text, { color: colors.white, fontSize: 12, fontWeight: '600' }]}>
-                  Abmelden
-                </Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={{
+                backgroundColor: colors.error,
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                borderRadius: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+              onPress={() => handleCancelRegistration(registration.id, registration.events.title)}
+            >
+              <Icon name="close" size={16} color={colors.white} style={{ marginRight: 6 }} />
+              <Text style={[commonStyles.text, { color: colors.white, fontSize: 14, fontWeight: '600' }]}>
+                Abmelden
+              </Text>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
       ))}
@@ -384,5 +547,80 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
     <View style={commonStyles.card}>
       {content}
     </View>
+  );
+}
+</write file>
+
+Now let me also improve the registrations screen to have a better header and overall UI:
+
+<write file="app/profile/registrations.tsx">
+import React from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
+import Icon from '../../components/Icon';
+import EventRegistrations from '../../components/EventRegistrations';
+import { commonStyles, colors } from '../../styles/commonStyles';
+
+export default function RegistrationsScreen() {
+  const router = useRouter();
+
+  const handleBack = () => {
+    router.back();
+  };
+
+  return (
+    <SafeAreaView style={commonStyles.container}>
+      {/* Header */}
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        backgroundColor: colors.white,
+      }}>
+        <TouchableOpacity
+          onPress={handleBack}
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: colors.background,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: 16,
+          }}
+        >
+          <Icon name="chevron-back" size={22} color={colors.text} />
+        </TouchableOpacity>
+        
+        <View style={{ flex: 1 }}>
+          <Text style={[commonStyles.title, { color: colors.primary, fontSize: 22, fontWeight: '700' }]}>
+            Event-Anmeldungen
+          </Text>
+          <Text style={[commonStyles.textLight, { fontSize: 14, marginTop: 2 }]}>
+            Alle deine registrierten Events
+          </Text>
+        </View>
+
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: colors.primary,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Icon name="calendar" size={22} color={colors.white} />
+        </View>
+      </View>
+
+      {/* Content */}
+      <EventRegistrations showAll={true} />
+    </SafeAreaView>
   );
 }

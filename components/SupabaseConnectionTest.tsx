@@ -1,230 +1,211 @@
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 import { commonStyles, colors, buttonStyles } from '../styles/commonStyles';
+import Icon from './Icon';
 
-interface TestData {
-  id: string;
-  test_message: string;
-  test_number: number;
-  created_at: string;
+interface TestResult {
+  step: string;
+  success: boolean;
+  message: string;
+  timestamp: string;
 }
 
-const SupabaseConnectionTest: React.FC = () => {
-  const [loading, setLoading] = useState(false);
-  const [testData, setTestData] = useState<TestData[]>([]);
-  const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'error'>('unknown');
+export default function SupabaseConnectionTest() {
+  const { user } = useAuth();
+  const [testing, setTesting] = useState(false);
+  const [results, setResults] = useState<TestResult[]>([]);
 
-  useEffect(() => {
-    testConnection();
-  }, []);
+  const addTestResult = (step: string, success: boolean, message: string) => {
+    const result: TestResult = {
+      step,
+      success,
+      message,
+      timestamp: new Date().toLocaleTimeString('de-DE')
+    };
+    setResults(prev => [...prev, result]);
+  };
 
-  const testConnection = async () => {
-    setLoading(true);
+  const clearResults = () => {
+    setResults([]);
+  };
+
+  const runConnectionTest = async () => {
+    setTesting(true);
+    clearResults();
+
     try {
-      console.log('Testing Supabase connection...');
-      
-      // Test 1: Read existing data
-      const { data: existingData, error: readError } = await supabase
-        .from('test_connection')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Test 1: Basic connection
+      addTestResult('Verbindung', true, 'Supabase Client initialisiert');
 
-      if (readError) {
-        console.error('Read error:', readError);
-        throw readError;
+      // Test 2: Database connection
+      try {
+        const { data, error } = await supabase
+          .from('test_connection')
+          .select('*')
+          .limit(1);
+
+        if (error) {
+          addTestResult('Datenbankverbindung', false, `Fehler: ${error.message}`);
+        } else {
+          addTestResult('Datenbankverbindung', true, 'Erfolgreich verbunden');
+        }
+      } catch (error) {
+        addTestResult('Datenbankverbindung', false, `Fehler: ${error}`);
       }
 
-      console.log('Existing test data:', existingData);
-      setTestData(existingData || []);
+      // Test 3: Auth status
+      if (user) {
+        addTestResult('Authentifizierung', true, `Angemeldet als: ${user.email}`);
+        
+        // Test 4: Profile access
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
 
-      // Test 2: Insert new data
-      const testMessage = `App Test - ${new Date().toLocaleString('de-DE')}`;
-      const { data: insertData, error: insertError } = await supabase
-        .from('test_connection')
-        .insert([
-          {
-            test_message: testMessage,
-            test_number: Math.floor(Math.random() * 100)
+          if (error && error.code !== 'PGRST116') {
+            addTestResult('Profil-Zugriff', false, `Fehler: ${error.message}`);
+          } else {
+            addTestResult('Profil-Zugriff', true, data ? 'Profil gefunden' : 'Profil nicht gefunden (normal bei neuen Benutzern)');
           }
-        ])
-        .select();
+        } catch (error) {
+          addTestResult('Profil-Zugriff', false, `Fehler: ${error}`);
+        }
 
-      if (insertError) {
-        console.error('Insert error:', insertError);
-        throw insertError;
+        // Test 5: Events access
+        try {
+          const { data, error } = await supabase
+            .from('events')
+            .select('id, title')
+            .limit(1);
+
+          if (error) {
+            addTestResult('Events-Zugriff', false, `Fehler: ${error.message}`);
+          } else {
+            addTestResult('Events-Zugriff', true, `${data?.length || 0} Events gefunden`);
+          }
+        } catch (error) {
+          addTestResult('Events-Zugriff', false, `Fehler: ${error}`);
+        }
+
+        // Test 6: Event registrations access
+        try {
+          const { data, error } = await supabase
+            .from('event_participants')
+            .select('id, profile_id')
+            .eq('profile_id', user.id)
+            .limit(1);
+
+          if (error) {
+            addTestResult('Anmeldungen-Zugriff', false, `Fehler: ${error.message}`);
+          } else {
+            addTestResult('Anmeldungen-Zugriff', true, `${data?.length || 0} Anmeldungen gefunden`);
+          }
+        } catch (error) {
+          addTestResult('Anmeldungen-Zugriff', false, `Fehler: ${error}`);
+        }
+      } else {
+        addTestResult('Authentifizierung', false, 'Nicht angemeldet');
       }
 
-      console.log('Inserted test data:', insertData);
-
-      // Test 3: Read updated data
-      const { data: updatedData, error: updateReadError } = await supabase
-        .from('test_connection')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (updateReadError) {
-        console.error('Updated read error:', updateReadError);
-        throw updateReadError;
-      }
-
-      setTestData(updatedData || []);
-      setConnectionStatus('connected');
-      
-      Alert.alert(
-        'Supabase Test Erfolgreich!',
-        `Verbindung funktioniert perfekt!\n\nGefundene Einträge: ${updatedData?.length || 0}\nNeuer Eintrag erstellt: ${testMessage}`,
-        [{ text: 'OK' }]
-      );
-
-    } catch (error: any) {
-      console.error('Supabase connection test failed:', error);
-      setConnectionStatus('error');
-      
-      Alert.alert(
-        'Supabase Verbindungsfehler',
-        `Fehler beim Testen der Verbindung:\n\n${error.message || error.toString()}`,
-        [{ text: 'OK' }]
-      );
+    } catch (error) {
+      addTestResult('Allgemeiner Test', false, `Unerwarteter Fehler: ${error}`);
     } finally {
-      setLoading(false);
+      setTesting(false);
     }
   };
 
-  const clearTestData = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('test_connection')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
-
-      if (error) {
-        throw error;
-      }
-
-      setTestData([]);
-      Alert.alert('Erfolg', 'Test-Daten wurden gelöscht!');
-    } catch (error: any) {
-      console.error('Error clearing test data:', error);
-      Alert.alert('Fehler', `Fehler beim Löschen: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
+  const getResultIcon = (success: boolean) => {
+    return success ? 'checkmark-circle' : 'close-circle';
   };
 
-  const getStatusColor = () => {
-    switch (connectionStatus) {
-      case 'connected':
-        return '#4CAF50';
-      case 'error':
-        return '#F44336';
-      default:
-        return colors.text;
-    }
-  };
-
-  const getStatusText = () => {
-    switch (connectionStatus) {
-      case 'connected':
-        return '✅ Verbunden';
-      case 'error':
-        return '❌ Fehler';
-      default:
-        return '⏳ Teste...';
-    }
+  const getResultColor = (success: boolean) => {
+    return success ? colors.success : colors.error;
   };
 
   return (
-    <View style={[commonStyles.container, { padding: 20 }]}>
-      <Text style={[commonStyles.title, { textAlign: 'center', marginBottom: 20 }]}>
-        Supabase Verbindungstest
-      </Text>
-
-      <View style={{
-        backgroundColor: colors.surface,
-        padding: 15,
-        borderRadius: 10,
-        marginBottom: 20,
-        alignItems: 'center'
-      }}>
-        <Text style={[commonStyles.subtitle, { color: getStatusColor(), marginBottom: 10 }]}>
-          Status: {getStatusText()}
+    <View style={[commonStyles.card, { marginBottom: 20 }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+        <Icon name="wifi" size={24} color={colors.primary} />
+        <Text style={[commonStyles.text, { fontWeight: '600', marginLeft: 12 }]}>
+          Supabase Verbindungstest
         </Text>
-        
-        {loading && <ActivityIndicator size="small" color={colors.primary} />}
       </View>
 
-      <View style={{ marginBottom: 20 }}>
-        <Text style={[commonStyles.subtitle, { marginBottom: 10 }]}>
-          Test-Daten ({testData.length} Einträge):
-        </Text>
-        
-        {testData.length > 0 ? (
-          testData.slice(0, 3).map((item, index) => (
-            <View key={item.id} style={{
-              backgroundColor: colors.surface,
-              padding: 10,
-              borderRadius: 8,
-              marginBottom: 8
-            }}>
-              <Text style={[commonStyles.text, { fontSize: 12, color: colors.textSecondary }]}>
-                #{index + 1} - {new Date(item.created_at).toLocaleString('de-DE')}
-              </Text>
-              <Text style={commonStyles.text}>
-                {item.test_message}
-              </Text>
-              <Text style={[commonStyles.text, { fontSize: 12, color: colors.textSecondary }]}>
-                Nummer: {item.test_number}
-              </Text>
-            </View>
-          ))
-        ) : (
-          <Text style={[commonStyles.text, { color: colors.textSecondary, textAlign: 'center' }]}>
-            Keine Test-Daten vorhanden
-          </Text>
-        )}
-      </View>
-
-      <TouchableOpacity
-        style={[buttonStyles.primary, { marginBottom: 10 }]}
-        onPress={testConnection}
-        disabled={loading}
-      >
-        <Text style={buttonStyles.primaryText}>
-          {loading ? 'Teste...' : 'Verbindung Testen'}
-        </Text>
-      </TouchableOpacity>
-
-      {testData.length > 0 && (
+      <View style={{ flexDirection: 'row', marginBottom: 16 }}>
         <TouchableOpacity
-          style={[buttonStyles.secondary]}
-          onPress={clearTestData}
-          disabled={loading}
+          style={[buttonStyles.primary, { flex: 1, marginRight: 8 }]}
+          onPress={runConnectionTest}
+          disabled={testing}
         >
-          <Text style={buttonStyles.secondaryText}>
-            Test-Daten Löschen
+          {testing ? (
+            <ActivityIndicator size="small" color={colors.white} />
+          ) : (
+            <Text style={[commonStyles.text, { color: colors.white, fontWeight: '600' }]}>
+              Test starten
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[buttonStyles.secondary, { flex: 1, marginLeft: 8 }]}
+          onPress={clearResults}
+          disabled={testing}
+        >
+          <Text style={[commonStyles.text, { color: colors.primary, fontWeight: '600' }]}>
+            Löschen
           </Text>
         </TouchableOpacity>
+      </View>
+
+      {results.length > 0 && (
+        <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
+          {results.map((result, index) => (
+            <View
+              key={index}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 8,
+                borderBottomWidth: index < results.length - 1 ? 1 : 0,
+                borderBottomColor: colors.border,
+              }}
+            >
+              <Icon
+                name={getResultIcon(result.success)}
+                size={20}
+                color={getResultColor(result.success)}
+                style={{ marginRight: 12 }}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={[commonStyles.text, { fontWeight: '600', fontSize: 14 }]}>
+                  {result.step}
+                </Text>
+                <Text style={[commonStyles.textLight, { fontSize: 12 }]}>
+                  {result.message}
+                </Text>
+              </View>
+              <Text style={[commonStyles.textLight, { fontSize: 10 }]}>
+                {result.timestamp}
+              </Text>
+            </View>
+          ))}
+        </ScrollView>
       )}
 
-      <View style={{ marginTop: 20, padding: 15, backgroundColor: colors.surface, borderRadius: 10 }}>
-        <Text style={[commonStyles.subtitle, { marginBottom: 10 }]}>
-          Verbindungsdetails:
-        </Text>
-        <Text style={[commonStyles.text, { fontSize: 12, color: colors.textSecondary }]}>
-          Projekt: asugynuigbnrsynczdhe
-        </Text>
-        <Text style={[commonStyles.text, { fontSize: 12, color: colors.textSecondary }]}>
-          Region: eu-central-1
-        </Text>
-        <Text style={[commonStyles.text, { fontSize: 12, color: colors.textSecondary }]}>
-          Status: ACTIVE_HEALTHY
-        </Text>
-      </View>
+      {results.length === 0 && !testing && (
+        <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+          <Icon name="information-circle" size={48} color={colors.textLight} />
+          <Text style={[commonStyles.textLight, { marginTop: 12, textAlign: 'center' }]}>
+            Klicke auf "Test starten", um die Verbindung zu überprüfen
+          </Text>
+        </View>
+      )}
     </View>
   );
-};
-
-export default SupabaseConnectionTest;
+}

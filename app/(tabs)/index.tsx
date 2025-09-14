@@ -7,7 +7,6 @@ import Icon from '../../components/Icon';
 import { commonStyles, colors } from '../../styles/commonStyles';
 import QRCodeDisplay from '../../components/QRCodeDisplay';
 import EventRegistrations from '../../components/EventRegistrations';
-import EventRegistrationsDebug from '../../components/EventRegistrationsDebug';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDate, formatTime } from '../../utils/dateUtils';
@@ -188,10 +187,6 @@ export default function HomeScreen() {
     router.push('/profile/registrations');
   };
 
-  const handleBookCourt = () => {
-    router.push('/(tabs)/events');
-  };
-
   const handleEventPress = (eventId: string) => {
     router.push(`/events/${eventId}`);
   };
@@ -362,9 +357,6 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Debug Component - Remove this after testing */}
-        <EventRegistrationsDebug />
-
         {/* Event Registrations - Most Important Section */}
         <EventRegistrations 
           showAll={false} 
@@ -372,7 +364,7 @@ export default function HomeScreen() {
           onViewAll={handleViewAllRegistrations}
         />
 
-        {/* Quick Actions */}
+        {/* Quick Actions - Removed "Platz buchen" */}
         <View style={[commonStyles.card, { marginBottom: 30 }]}>
           <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16 }]}>
             Schnellzugriff
@@ -403,30 +395,13 @@ export default function HomeScreen() {
                 padding: 16,
                 backgroundColor: colors.background,
                 borderRadius: 12,
-                marginHorizontal: 4,
+                marginLeft: 8,
               }}
               onPress={handleTournaments}
             >
               <Icon name="trophy" size={32} color={colors.primary} />
               <Text style={[commonStyles.text, { marginTop: 8, fontSize: 12, textAlign: 'center' }]}>
                 Turniere
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={{
-                flex: 1,
-                alignItems: 'center',
-                padding: 16,
-                backgroundColor: colors.background,
-                borderRadius: 12,
-                marginLeft: 8,
-              }}
-              onPress={handleBookCourt}
-            >
-              <Icon name="location" size={32} color={colors.primary} />
-              <Text style={[commonStyles.text, { marginTop: 8, fontSize: 12, textAlign: 'center' }]}>
-                Platz buchen
               </Text>
             </TouchableOpacity>
           </View>
@@ -499,15 +474,9 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* QR Code */}
+        {/* QR Code - Now Collapsible */}
         <View style={[commonStyles.card, { marginBottom: 30 }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <Icon name="qr-code" size={24} color={colors.primary} />
-            <Text style={[commonStyles.text, { fontWeight: '600', marginLeft: 12 }]}>
-              Mein QR-Code
-            </Text>
-          </View>
-          <QRCodeDisplay userId={user.id} />
+          <QRCodeDisplay userId={user.id} collapsible={true} />
         </View>
       </ScrollView>
     </SafeAreaView>

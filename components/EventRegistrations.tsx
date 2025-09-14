@@ -11,7 +11,7 @@ import { formatDate, formatTime, isEventUpcoming } from '../utils/dateUtils';
 interface EventRegistration {
   id: string;
   event_id: string;
-  user_id: string;
+  profile_id: string;
   status?: 'PENDING' | 'ACCEPTED' | 'DECLINED';
   created_at: string;
   events: {
@@ -45,18 +45,22 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
   }, [user]);
 
   const fetchRegistrations = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user found, skipping registration fetch');
+      setLoading(false);
+      return;
+    }
 
     try {
       console.log('Fetching event registrations for user:', user.id);
       
-      // First, let's try with user_id field
+      // Query using profile_id (which matches the user.id from auth)
       let query = supabase
         .from('event_participants')
         .select(`
           id,
           event_id,
-          user_id,
+          profile_id,
           status,
           created_at,
           events!inner (
@@ -69,7 +73,7 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
             type
           )
         `)
-        .eq('user_id', user.id)
+        .eq('profile_id', user.id)
         .order('events.start_time', { ascending: true });
 
       if (!showAll) {
@@ -80,49 +84,12 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
 
       if (error) {
         console.error('Error fetching event registrations:', error);
-        // If user_id doesn't work, try with profile_id
-        if (error.message?.includes('user_id')) {
-          console.log('Trying with profile_id instead...');
-          let fallbackQuery = supabase
-            .from('event_participants')
-            .select(`
-              id,
-              event_id,
-              profile_id,
-              status,
-              created_at,
-              events!inner (
-                id,
-                title,
-                description,
-                start_time,
-                end_time,
-                location,
-                type
-              )
-            `)
-            .eq('profile_id', user.id)
-            .order('events.start_time', { ascending: true });
-
-          if (!showAll) {
-            fallbackQuery = fallbackQuery.limit(limit);
-          }
-
-          const { data: fallbackData, error: fallbackError } = await fallbackQuery;
-          
-          if (fallbackError) {
-            console.error('Error with fallback query:', fallbackError);
-            return;
-          }
-          
-          console.log('Fetched registrations with profile_id:', fallbackData);
-          processRegistrations(fallbackData || []);
-          return;
-        }
+        setLoading(false);
+        setRefreshing(false);
         return;
       }
 
-      console.log('Fetched registrations with user_id:', data);
+      console.log('Fetched registrations:', data);
       processRegistrations(data || []);
     } catch (error) {
       console.error('Error in fetchRegistrations:', error);
@@ -135,16 +102,21 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
   const processRegistrations = (data: any[]) => {
     // Filter to show only upcoming events
     const upcomingRegistrations = data
-      .filter(reg => isEventUpcoming(reg.events.start_time))
+      .filter(reg => {
+        const isUpcoming = isEventUpcoming(reg.events.start_time);
+        console.log(`Event ${reg.events.title} (${reg.events.start_time}) is upcoming: ${isUpcoming}`);
+        return isUpcoming;
+      })
       .map(reg => ({
         id: reg.id,
         event_id: reg.event_id,
-        user_id: reg.user_id || reg.profile_id,
+        profile_id: reg.profile_id,
         status: reg.status || 'PENDING',
         created_at: reg.created_at,
         events: reg.events
       }));
 
+    console.log('Processed upcoming registrations:', upcomingRegistrations);
     setRegistrations(upcomingRegistrations);
   };
 
@@ -547,80 +519,5 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
     <View style={commonStyles.card}>
       {content}
     </View>
-  );
-}
-</write file>
-
-Now let me also improve the registrations screen to have a better header and overall UI:
-
-<write file="app/profile/registrations.tsx">
-import React from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import Icon from '../../components/Icon';
-import EventRegistrations from '../../components/EventRegistrations';
-import { commonStyles, colors } from '../../styles/commonStyles';
-
-export default function RegistrationsScreen() {
-  const router = useRouter();
-
-  const handleBack = () => {
-    router.back();
-  };
-
-  return (
-    <SafeAreaView style={commonStyles.container}>
-      {/* Header */}
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-        backgroundColor: colors.white,
-      }}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: colors.background,
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginRight: 16,
-          }}
-        >
-          <Icon name="chevron-back" size={22} color={colors.text} />
-        </TouchableOpacity>
-        
-        <View style={{ flex: 1 }}>
-          <Text style={[commonStyles.title, { color: colors.primary, fontSize: 22, fontWeight: '700' }]}>
-            Event-Anmeldungen
-          </Text>
-          <Text style={[commonStyles.textLight, { fontSize: 14, marginTop: 2 }]}>
-            Alle deine registrierten Events
-          </Text>
-        </View>
-
-        <View
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: colors.primary,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <Icon name="calendar" size={22} color={colors.white} />
-        </View>
-      </View>
-
-      {/* Content */}
-      <EventRegistrations showAll={true} />
-    </SafeAreaView>
   );
 }

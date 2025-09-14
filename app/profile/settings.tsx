@@ -2,6 +2,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import Icon from '../../components/Icon';
+import SupabaseConnectionTest from '../../components/SupabaseConnectionTest';
+import StorageSetup from '../../components/StorageSetup';
+import AvatarUploadTest from '../../components/AvatarUploadTest';
 import { Text, View, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -124,6 +127,15 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
+        {/* Connection Test */}
+        <SupabaseConnectionTest />
+
+        {/* Storage Setup */}
+        <StorageSetup />
+
+        {/* Avatar Test */}
+        <AvatarUploadTest />
+
         <View style={commonStyles.card}>
           <Text style={[commonStyles.subtitle, { marginBottom: 20 }]}>
             App-Einstellungen
@@ -222,7 +234,10 @@ export default function SettingsScreen() {
             Pickleball Salzburg Union
           </Text>
           <Text style={[commonStyles.caption, { textAlign: 'center', color: colors.textSecondary, marginTop: 5 }]}>
-            Version 1.0.0
+            Version 1.0.0 - Debug Build
+          </Text>
+          <Text style={[commonStyles.caption, { textAlign: 'center', color: colors.success, marginTop: 5 }]}>
+            ✅ Supabase konfiguriert
           </Text>
         </View>
       </ScrollView>

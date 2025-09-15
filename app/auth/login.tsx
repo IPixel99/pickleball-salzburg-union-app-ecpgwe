@@ -6,6 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Icon from '../../components/Icon';
 import { useAuth } from '../../hooks/useAuth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const ONBOARDING_COMPLETED_KEY = 'onboarding_completed';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -27,6 +30,9 @@ export default function LoginScreen() {
     try {
       const result = await signIn(email, password);
       console.log('LoginScreen: Login successful');
+      
+      // Mark onboarding as completed
+      await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
       
       // Show success message and redirect
       Alert.alert(
@@ -90,8 +96,8 @@ export default function LoginScreen() {
   };
 
   const handleBack = () => {
-    console.log('LoginScreen: Going back');
-    router.back();
+    console.log('LoginScreen: Going back to onboarding');
+    router.push('/onboarding');
   };
 
   return (

@@ -6,6 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Icon from '../../components/Icon';
 import { useAuth } from '../../hooks/useAuth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const ONBOARDING_COMPLETED_KEY = 'onboarding_completed';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -56,6 +59,9 @@ export default function SignupScreen() {
       const result = await signUp(formData.email, formData.password, formData.firstName, formData.lastName);
       console.log('SignupScreen: Signup successful');
       
+      // Mark onboarding as completed
+      await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
+      
       Alert.alert(
         'Registrierung erfolgreich!',
         'Dein Konto wurde erstellt. Bitte überprüfe deine E-Mails und bestätige deine E-Mail-Adresse, bevor du dich anmeldest.',
@@ -99,8 +105,8 @@ export default function SignupScreen() {
   };
 
   const handleBack = () => {
-    console.log('SignupScreen: Going back');
-    router.back();
+    console.log('SignupScreen: Going back to onboarding');
+    router.push('/onboarding');
   };
 
   const updateFormData = (field: string, value: string) => {

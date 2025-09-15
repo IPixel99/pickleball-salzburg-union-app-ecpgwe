@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Text, View, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,7 +24,7 @@ export default function NewsDetailScreen() {
   const [newsPost, setNewsPost] = useState<NewsPost | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchNewsPost = async () => {
+  const fetchNewsPost = useCallback(async () => {
     try {
       console.log('Fetching news post with id:', id);
       const { data, error } = await supabase
@@ -49,13 +49,13 @@ export default function NewsDetailScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, router]);
 
   useEffect(() => {
     if (id) {
       fetchNewsPost();
     }
-  }, [id]);
+  }, [id, fetchNewsPost]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

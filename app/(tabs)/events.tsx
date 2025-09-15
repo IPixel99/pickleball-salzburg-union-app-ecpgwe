@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Text, View, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -34,7 +34,7 @@ export default function EventsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
       console.log('Fetching events from Supabase...');
       const { data, error } = await supabase
@@ -84,11 +84,11 @@ export default function EventsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchEvents();
-  }, [user]);
+  }, [fetchEvents]);
 
   const onRefresh = () => {
     setRefreshing(true);

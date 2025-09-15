@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Text, View, ScrollView, TouchableOpacity, Image, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -42,25 +42,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    if (!authLoading) {
-      if (user) {
-        fetchData();
-      } else {
-        setLoading(false);
-      }
-    }
-  }, [user, authLoading]);
-
-  const fetchData = async () => {
-    await Promise.all([
-      fetchProfile(),
-      fetchUpcomingEvents()
-    ]);
-    setLoading(false);
-  };
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -101,9 +83,9 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('Error in fetchProfile:', error);
     }
-  };
+  }, [user]);
 
-  const fetchUpcomingEvents = async () => {
+  const fetchUpcomingEvents = useCallback(async () => {
     try {
       console.log('Fetching upcoming events');
       const now = new Date().toISOString();
@@ -124,7 +106,25 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('Error in fetchUpcomingEvents:', error);
     }
-  };
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    await Promise.all([
+      fetchProfile(),
+      fetchUpcomingEvents()
+    ]);
+    setLoading(false);
+  }, [fetchProfile, fetchUpcomingEvents]);
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (user) {
+        fetchData();
+      } else {
+        setLoading(false);
+      }
+    }
+  }, [user, authLoading, fetchData]);
 
   const onRefresh = async () => {
     setRefreshing(true);

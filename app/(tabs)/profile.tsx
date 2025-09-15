@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Text, View, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -22,31 +22,22 @@ interface Profile {
 }
 
 interface MembershipInfo {
-  memberships: Array<{
+  memberships: {
     type: 'summer_season' | 'ten_block' | 'pay_by_play';
     credits?: number;
     displayName: string;
-  }>;
+  }[];
   primaryMembership: string;
 }
 
 export default function ProfileScreen() {
-  const { user, authLoading } = useAuth();
+  const { user, authLoading, signOut } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [membershipInfo, setMembershipInfo] = useState<MembershipInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      if (user) {
-        fetchProfile();
-        fetchMembershipInfo();
-      }
-    }, [user])
-  );
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -88,9 +79,9 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  const fetchMembershipInfo = async () => {
+  const fetchMembershipInfo = useCallback(async () => {
     // Mock-Daten für Mitgliedschaftsinformationen
     // In einer echten App würde dies von der Datenbank kommen
     setMembershipInfo({
@@ -102,7 +93,16 @@ export default function ProfileScreen() {
       ],
       primaryMembership: 'Sommersaison 2024'
     });
-  };
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user) {
+        fetchProfile();
+        fetchMembershipInfo();
+      }
+    }, [user, fetchProfile, fetchMembershipInfo])
+  );
 
   const handleLogout = () => {
     Alert.alert(
@@ -115,7 +115,6 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const { signOut } = useAuth();
               await signOut();
               router.replace('/auth/login');
             } catch (error) {

@@ -2,10 +2,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import Icon from '../../components/Icon';
-import SupabaseConnectionTest from '../../components/SupabaseConnectionTest';
-import StorageSetup from '../../components/StorageSetup';
-import AvatarUploadTest from '../../components/AvatarUploadTest';
-import EventRegistrationsTest from '../../components/EventRegistrationsTest';
 import { Text, View, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -44,18 +40,6 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleTestAvatar = () => {
-    router.push('/test-avatar');
-  };
-
-  const handleTestSupabase = () => {
-    router.push('/test-supabase');
-  };
-
-  const handleTestMembership = () => {
-    router.push('/test-membership');
-  };
-
   const settingsOptions = [
     {
       title: 'Benachrichtigungen',
@@ -72,27 +56,6 @@ export default function SettingsScreen() {
       type: 'switch',
       value: darkMode,
       onToggle: setDarkMode,
-    },
-    {
-      title: 'Avatar Test',
-      subtitle: 'Teste die Avatar-Upload-Funktionalität',
-      icon: 'camera',
-      type: 'action',
-      onPress: handleTestAvatar,
-    },
-    {
-      title: 'Supabase Test',
-      subtitle: 'Teste die Datenbankverbindung',
-      icon: 'database',
-      type: 'action',
-      onPress: handleTestSupabase,
-    },
-    {
-      title: 'Membership Test',
-      subtitle: 'Teste die Mitgliedschafts-Funktionalität',
-      icon: 'users',
-      type: 'action',
-      onPress: handleTestMembership,
     },
     {
       title: 'Datenschutz',
@@ -128,18 +91,6 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
-        {/* Connection Test */}
-        <SupabaseConnectionTest />
-
-        {/* Storage Setup */}
-        <StorageSetup />
-
-        {/* Avatar Test */}
-        <AvatarUploadTest />
-
-        {/* Event Registrations Test */}
-        <EventRegistrationsTest />
-
         <View style={commonStyles.card}>
           <Text style={[commonStyles.subtitle, { marginBottom: 20 }]}>
             App-Einstellungen
@@ -238,10 +189,10 @@ export default function SettingsScreen() {
             Pickleball Salzburg Union
           </Text>
           <Text style={[commonStyles.caption, { textAlign: 'center', color: colors.textSecondary, marginTop: 5 }]}>
-            Version 1.0.0 - Debug Build
+            Version 1.0.0
           </Text>
           <Text style={[commonStyles.caption, { textAlign: 'center', color: colors.success, marginTop: 5 }]}>
-            ✅ Supabase konfiguriert
+            📱 Lokale Bildspeicherung aktiv
           </Text>
         </View>
       </ScrollView>

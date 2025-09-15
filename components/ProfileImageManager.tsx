@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Image, ScrollVi
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../hooks/useAuth';
 import { commonStyles, colors, buttonStyles } from '../styles/commonStyles';
+import { saveImageLocally } from '../utils/localImageStorage';
 import Icon from './Icon';
 
 interface ProfileImageManagerProps {
@@ -11,48 +12,10 @@ interface ProfileImageManagerProps {
   onImageUpdate?: (imageUrl: string | null) => void;
 }
 
-interface StorageOption {
-  id: string;
-  name: string;
-  description: string;
-  available: boolean;
-  icon: string;
-}
-
 export default function ProfileImageManager({ currentImageUrl, onImageUpdate }: ProfileImageManagerProps) {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [storageOptions] = useState<StorageOption[]>([
-    {
-      id: 'supabase',
-      name: 'Supabase Storage',
-      description: 'Empfohlene Lösung - integriert mit der App',
-      available: true,
-      icon: 'cloud-upload'
-    },
-    {
-      id: 'cloudinary',
-      name: 'Cloudinary',
-      description: 'Cloud-basierte Bildverwaltung mit automatischer Optimierung',
-      available: false,
-      icon: 'image'
-    },
-    {
-      id: 'aws-s3',
-      name: 'Amazon S3',
-      description: 'Skalierbare Cloud-Speicherlösung',
-      available: false,
-      icon: 'server'
-    },
-    {
-      id: 'local',
-      name: 'Lokale Speicherung',
-      description: 'Temporäre Lösung - Bilder gehen bei App-Update verloren',
-      available: true,
-      icon: 'phone-portrait'
-    }
-  ]);
 
   const pickImage = async () => {
     try {
@@ -76,6 +39,7 @@ export default function ProfileImageManager({ currentImageUrl, onImageUpdate }: 
 
       if (!result.canceled) {
         setSelectedImage(result.assets[0].uri);
+        await handleUpload(result.assets[0].uri);
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -104,6 +68,7 @@ export default function ProfileImageManager({ currentImageUrl, onImageUpdate }: 
 
       if (!result.canceled) {
         setSelectedImage(result.assets[0].uri);
+        await handleUpload(result.assets[0].uri);
       }
     } catch (error) {
       console.error('Error taking photo:', error);
@@ -111,96 +76,43 @@ export default function ProfileImageManager({ currentImageUrl, onImageUpdate }: 
     }
   };
 
-  const uploadWithSupabase = async (imageUri: string) => {
+  const handleUpload = async (imageUri: string) => {
     if (!user) {
-      throw new Error('Benutzer nicht angemeldet');
-    }
-
-    console.log('Uploading to Supabase Storage...');
-    
-    // Import the upload function dynamically to avoid circular dependencies
-    const { uploadProfileImage } = await import('../utils/imageUtils');
-    
-    const result = await uploadProfileImage(imageUri, user.id);
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Upload fehlgeschlagen');
-    }
-    
-    return result.url!;
-  };
-
-  const uploadWithCloudinary = async (imageUri: string) => {
-    // Placeholder for Cloudinary implementation
-    throw new Error('Cloudinary-Integration noch nicht implementiert');
-  };
-
-  const uploadWithAWS = async (imageUri: string) => {
-    // Placeholder for AWS S3 implementation
-    throw new Error('AWS S3-Integration noch nicht implementiert');
-  };
-
-  const saveLocally = async (imageUri: string) => {
-    // For local storage, we just return the URI
-    // In a real app, you might want to copy the file to a permanent location
-    console.log('Saving image locally:', imageUri);
-    return imageUri;
-  };
-
-  const handleUpload = async (storageType: string) => {
-    if (!selectedImage) {
-      Alert.alert('Fehler', 'Bitte wähle zuerst ein Bild aus.');
+      Alert.alert('Fehler', 'Benutzer nicht angemeldet');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      let uploadedUrl: string;
-
-      switch (storageType) {
-        case 'supabase':
-          uploadedUrl = await uploadWithSupabase(selectedImage);
-          break;
-        case 'cloudinary':
-          uploadedUrl = await uploadWithCloudinary(selectedImage);
-          break;
-        case 'aws-s3':
-          uploadedUrl = await uploadWithAWS(selectedImage);
-          break;
-        case 'local':
-          uploadedUrl = await saveLocally(selectedImage);
-          break;
-        default:
-          throw new Error('Unbekannter Speichertyp');
+      console.log('Saving image locally:', imageUri);
+      
+      const result = await saveImageLocally(imageUri, user.id);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Lokale Speicherung fehlgeschlagen');
       }
 
-      console.log('Image uploaded successfully:', uploadedUrl);
-      onImageUpdate?.(uploadedUrl);
+      console.log('Image saved locally successfully:', result.url);
+      onImageUpdate?.(result.url!);
       setSelectedImage(null);
 
       Alert.alert(
         'Erfolg!',
-        'Dein Profilbild wurde erfolgreich gespeichert.',
+        'Dein Profilbild wurde erfolgreich lokal gespeichert.',
         [{ text: 'OK', style: 'default' }]
       );
 
     } catch (error) {
       console.error('Upload error:', error);
       
-      let errorMessage = 'Beim Hochladen ist ein Fehler aufgetreten.';
+      let errorMessage = 'Beim Speichern ist ein Fehler aufgetreten.';
       
       if (error instanceof Error) {
-        if (error.message.includes('Bucket not found')) {
-          errorMessage = 'Supabase Storage ist nicht eingerichtet. Bitte verwende eine alternative Speicheroption oder richte Supabase Storage ein.';
-        } else if (error.message.includes('Policy') || error.message.includes('permission')) {
-          errorMessage = 'Keine Berechtigung zum Hochladen. Bitte überprüfe die Supabase-Einstellungen.';
-        } else {
-          errorMessage = error.message;
-        }
+        errorMessage = error.message;
       }
 
-      Alert.alert('Upload-Fehler', errorMessage);
+      Alert.alert('Speicher-Fehler', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -307,7 +219,7 @@ export default function ProfileImageManager({ currentImageUrl, onImageUpdate }: 
         </View>
       )}
 
-      {/* Image Selection Buttons */}
+      {/* Image Selection Button */}
       <View style={{ marginBottom: 20 }}>
         <TouchableOpacity
           style={[buttonStyles.primary, { marginBottom: 12 }]}
@@ -315,121 +227,38 @@ export default function ProfileImageManager({ currentImageUrl, onImageUpdate }: 
           disabled={isLoading}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="camera" size={18} color={colors.white} />
-            <Text style={[commonStyles.buttonTextWhite, { marginLeft: 8 }]}>
-              {selectedImage ? 'Anderes Bild wählen' : 'Bild auswählen'}
-            </Text>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <>
+                <Icon name="camera" size={18} color={colors.white} />
+                <Text style={[commonStyles.buttonTextWhite, { marginLeft: 8 }]}>
+                  {currentImageUrl ? 'Bild ändern' : 'Bild hinzufügen'}
+                </Text>
+              </>
+            )}
           </View>
         </TouchableOpacity>
       </View>
 
-      {/* Storage Options */}
-      {selectedImage && (
-        <View>
-          <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 12 }]}>
-            Speicheroptionen:
-          </Text>
-          
-          {storageOptions.map((option) => (
-            <TouchableOpacity
-              key={option.id}
-              style={[
-                {
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  padding: 16,
-                  marginBottom: 8,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: option.available ? colors.border : colors.textSecondary + '40',
-                  backgroundColor: option.available ? colors.white : colors.background
-                },
-                !option.available && { opacity: 0.6 }
-              ]}
-              onPress={() => option.available && handleUpload(option.id)}
-              disabled={!option.available || isLoading}
-            >
-              <View style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: option.available ? colors.primary + '20' : colors.textSecondary + '20',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 12
-              }}>
-                <Icon 
-                  name={option.icon} 
-                  size={20} 
-                  color={option.available ? colors.primary : colors.textSecondary} 
-                />
-              </View>
-              
-              <View style={{ flex: 1 }}>
-                <Text style={[
-                  commonStyles.text, 
-                  { fontWeight: '500', marginBottom: 2 },
-                  !option.available && { color: colors.textSecondary }
-                ]}>
-                  {option.name}
-                </Text>
-                <Text style={[
-                  commonStyles.textLight, 
-                  { fontSize: 12, lineHeight: 16 },
-                  !option.available && { color: colors.textSecondary }
-                ]}>
-                  {option.description}
-                </Text>
-              </View>
-              
-              {option.available && (
-                <View style={{ marginLeft: 8 }}>
-                  {isLoading ? (
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  ) : (
-                    <Icon name="chevron-forward" size={16} color={colors.textSecondary} />
-                  )}
-                </View>
-              )}
-              
-              {!option.available && (
-                <View style={{
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  backgroundColor: colors.warning + '20',
-                  borderRadius: 4,
-                  marginLeft: 8
-                }}>
-                  <Text style={[commonStyles.textLight, { fontSize: 10, color: colors.warning }]}>
-                    Bald verfügbar
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
-      {/* Help Section */}
+      {/* Info Section */}
       <View style={{
         marginTop: 20,
         padding: 16,
-        backgroundColor: colors.background,
+        backgroundColor: colors.success + '10',
         borderRadius: 12,
         borderLeftWidth: 4,
-        borderLeftColor: colors.primary
+        borderLeftColor: colors.success
       }}>
-        <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
-          💡 Speicheroptionen erklärt:
-        </Text>
-        <Text style={[commonStyles.textLight, { fontSize: 12, lineHeight: 18, marginBottom: 8 }]}>
-          • <Text style={{ fontWeight: '500' }}>Supabase Storage:</Text> Beste Integration, aber erfordert Setup
-        </Text>
-        <Text style={[commonStyles.textLight, { fontSize: 12, lineHeight: 18, marginBottom: 8 }]}>
-          • <Text style={{ fontWeight: '500' }}>Cloudinary/AWS:</Text> Professionelle Lösungen (in Entwicklung)
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+          <Icon name="phone-portrait" size={20} color={colors.success} />
+          <Text style={[commonStyles.text, { fontWeight: '600', marginLeft: 8, color: colors.success }]}>
+            Lokale Speicherung aktiv
+          </Text>
+        </View>
         <Text style={[commonStyles.textLight, { fontSize: 12, lineHeight: 18 }]}>
-          • <Text style={{ fontWeight: '500' }}>Lokal:</Text> Temporäre Lösung, Bilder gehen bei Updates verloren
+          Deine Profilbilder werden sicher auf deinem Gerät gespeichert. 
+          Dies gewährleistet Datenschutz und schnelle Ladezeiten.
         </Text>
       </View>
     </ScrollView>

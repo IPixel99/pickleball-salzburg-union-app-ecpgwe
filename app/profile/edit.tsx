@@ -44,6 +44,10 @@ export default function EditProfileScreen() {
     try {
       console.log('Fetching profile for user:', user.id);
       
+      // Zuerst versuchen, das lokale Bild zu laden
+      const localImage = await getLocalImage(user.id);
+      console.log('Local image found:', localImage);
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -60,7 +64,7 @@ export default function EditProfileScreen() {
             email: user.email,
             first_name: null,
             last_name: null,
-            avatar_url: null,
+            avatar_url: localImage, // Verwende das lokale Bild
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });
@@ -74,21 +78,15 @@ export default function EditProfileScreen() {
         }
       } else {
         console.log('Profile loaded:', data);
-        setProfile(data);
+        setProfile({
+          ...data,
+          avatar_url: localImage || data.avatar_url // Bevorzuge lokales Bild
+        });
         setFormData({
           first_name: data.first_name || '',
           last_name: data.last_name || '',
           email: data.email || user.email || ''
         });
-
-        // Versuche auch ein lokal gespeichertes Bild zu laden, falls Supabase nicht funktioniert
-        if (!data.avatar_url) {
-          const localImage = await getLocalImage(user.id);
-          if (localImage) {
-            console.log('Found local image:', localImage);
-            setProfile(prev => prev ? { ...prev, avatar_url: localImage } : null);
-          }
-        }
       }
     } catch (error) {
       console.error('Error in fetchProfile:', error);
@@ -106,18 +104,22 @@ export default function EditProfileScreen() {
     // Aktualisiere das lokale Profil sofort
     setProfile(prev => prev ? { ...prev, avatar_url: imageUrl } : null);
 
-    // Wenn es ein lokales Bild ist, speichere es auch lokal
-    if (imageUrl && (imageUrl.startsWith('file://') || imageUrl.startsWith('content://'))) {
-      await saveImageLocally(imageUrl, user.id);
+    // Wenn es ein Bild gibt, speichere es lokal
+    if (imageUrl) {
+      const result = await saveImageLocally(imageUrl, user.id);
+      if (!result.success) {
+        console.error('Failed to save image locally:', result.error);
+        Alert.alert('Warnung', 'Das Bild konnte nicht lokal gespeichert werden.');
+      }
     }
 
-    // Versuche auch die Datenbank zu aktualisieren (falls möglich)
+    // Versuche auch die Datenbank zu aktualisieren (optional)
     try {
       const { error } = await supabase
         .from('profiles')
         .upsert({
           id: user.id,
-          avatar_url: imageUrl,
+          avatar_url: null, // Speichere keine URLs in der Datenbank, nur lokal
           updated_at: new Date().toISOString()
         });
 
@@ -125,7 +127,7 @@ export default function EditProfileScreen() {
         console.warn('Could not update avatar in database:', error.message);
         // Nicht als Fehler behandeln, da lokale Speicherung funktioniert
       } else {
-        console.log('Avatar updated in database successfully');
+        console.log('Profile updated in database (avatar cleared)');
       }
     } catch (error) {
       console.warn('Database update failed, but local storage succeeded:', error);
@@ -145,7 +147,7 @@ export default function EditProfileScreen() {
         email: formData.email,
         first_name: formData.first_name || null,
         last_name: formData.last_name || null,
-        avatar_url: profile?.avatar_url || null,
+        avatar_url: null, // Keine Avatar-URLs in der Datenbank speichern
         updated_at: new Date().toISOString()
       };
 
@@ -299,17 +301,17 @@ export default function EditProfileScreen() {
         </View>
 
         {/* Info Card */}
-        <View style={[commonStyles.card, { backgroundColor: colors.primary + '10', marginTop: 20 }]}>
+        <View style={[commonStyles.card, { backgroundColor: colors.success + '10', marginTop: 20 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <Icon name="information-circle" size={20} color={colors.primary} />
-            <Text style={[commonStyles.text, { fontWeight: '600', marginLeft: 8, color: colors.primary }]}>
-              Hinweis zur Bildspeicherung
+            <Icon name="shield-checkmark" size={20} color={colors.success} />
+            <Text style={[commonStyles.text, { fontWeight: '600', marginLeft: 8, color: colors.success }]}>
+              Datenschutz & Lokale Speicherung
             </Text>
           </View>
           <Text style={[commonStyles.textLight, { lineHeight: 18 }]}>
-            Falls Supabase Storage nicht funktioniert, werden Profilbilder temporär lokal gespeichert. 
-            Diese gehen bei App-Updates verloren. Für eine dauerhafte Lösung sollte Supabase Storage 
-            eingerichtet oder eine alternative Speicherlösung verwendet werden.
+            Deine Profilbilder werden ausschließlich lokal auf deinem Gerät gespeichert. 
+            Dies gewährleistet maximalen Datenschutz und schnelle Ladezeiten. 
+            Deine Bilder verlassen niemals dein Gerät.
           </Text>
         </View>
 

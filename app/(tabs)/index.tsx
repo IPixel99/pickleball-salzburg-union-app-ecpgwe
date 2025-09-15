@@ -357,11 +357,11 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* My Registrations Quick Access - Show max 3 upcoming events */}
+        {/* My Registrations Quick Access - Show max 2 upcoming events */}
         <View style={{ marginBottom: 20 }}>
           <EventRegistrations 
             showAll={false} 
-            limit={3} 
+            limit={2} 
             compact={true}
             onViewAll={handleViewAllRegistrations}
           />

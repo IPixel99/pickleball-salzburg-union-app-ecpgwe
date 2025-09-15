@@ -387,7 +387,7 @@ export default function HomeScreen() {
             >
               <Icon name="calendar" size={32} color={colors.primary} />
               <Text style={[commonStyles.text, { marginTop: 8, fontSize: 12, textAlign: 'center' }]}>
-                Session buchen
+                Events
               </Text>
             </TouchableOpacity>
             

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import Icon from './Icon';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -43,19 +44,32 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
   useEffect(() => {
     if (user) {
       fetchRegistrations();
-      
-      // Set up automatic refresh every 30 seconds for better updates
-      refreshIntervalRef.current = setInterval(() => {
-        fetchRegistrations();
-      }, 30000);
+    } else {
+      setLoading(false);
     }
-
-    return () => {
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
-      }
-    };
   }, [user]);
+
+  // Set up automatic refresh when component is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user) {
+        console.log('EventRegistrations focused - setting up auto refresh');
+        
+        // Set up automatic refresh every 30 seconds
+        refreshIntervalRef.current = setInterval(() => {
+          console.log('Auto-refreshing event registrations');
+          fetchRegistrations();
+        }, 30000);
+
+        return () => {
+          console.log('EventRegistrations unfocused - clearing auto refresh');
+          if (refreshIntervalRef.current) {
+            clearInterval(refreshIntervalRef.current);
+          }
+        };
+      }
+    }, [user])
+  );
 
   const fetchRegistrations = async () => {
     if (!user) {
@@ -87,10 +101,6 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
           )
         `)
         .eq('profile_id', user.id);
-
-      if (!showAll) {
-        query = query.limit(limit);
-      }
 
       const { data, error } = await query;
 
@@ -133,7 +143,10 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
       });
 
     console.log('Processed upcoming registrations:', upcomingRegistrations);
-    setRegistrations(upcomingRegistrations);
+    
+    // Apply limit if not showing all
+    const finalRegistrations = showAll ? upcomingRegistrations : upcomingRegistrations.slice(0, limit);
+    setRegistrations(finalRegistrations);
   };
 
   const onRefresh = () => {

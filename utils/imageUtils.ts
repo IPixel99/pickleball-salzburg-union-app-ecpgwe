@@ -1,5 +1,5 @@
 
-import { supabase, supabaseUrl } from '../lib/supabase';
+import { supabase, supabaseStorage, supabaseUrl } from '../lib/supabase';
 import { Platform } from 'react-native';
 
 export interface ImageUploadResult {
@@ -120,6 +120,7 @@ export const uploadProfileImage = async (
     console.log('Image URI:', uri);
     console.log('Supabase URL:', supabaseUrl);
     console.log('Target bucket: avatars');
+    console.log('Using special storage client for profile images');
     
     if (!uri || !userId) {
       console.error('Missing required parameters');
@@ -186,9 +187,9 @@ export const uploadProfileImage = async (
       bucket: 'avatars'
     });
     
-    // Upload to Supabase storage - using the "avatars" bucket
-    console.log('Starting upload to avatars bucket...');
-    const { data, error } = await supabase.storage
+    // Upload to Supabase storage using the special storage client - using the "avatars" bucket
+    console.log('Starting upload to avatars bucket using storage client...');
+    const { data, error } = await supabaseStorage.storage
       .from('avatars')
       .upload(fileName, blob, {
         cacheControl: '3600',
@@ -247,8 +248,8 @@ export const uploadProfileImage = async (
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/avatars/${fileName}`;
     console.log('Public URL generated:', publicUrl);
 
-    // Update the user's profile with the new avatar URL
-    console.log('Updating profile with new avatar URL...');
+    // Update the user's profile with the new avatar URL using the main client
+    console.log('Updating profile with new avatar URL using main client...');
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ 
@@ -288,6 +289,7 @@ export const deleteProfileImage = async (
     console.log('=== AVATAR DELETE START ===');
     console.log('Avatar URL:', avatarUrl);
     console.log('User ID:', userId);
+    console.log('Using special storage client for profile image deletion');
     
     if (!avatarUrl || !userId) {
       console.error('Invalid parameters for deleteProfileImage');
@@ -307,7 +309,8 @@ export const deleteProfileImage = async (
     
     console.log('Deleting profile image from avatars bucket:', filePath);
     
-    const { error } = await supabase.storage
+    // Use the special storage client for deletion
+    const { error } = await supabaseStorage.storage
       .from('avatars')
       .remove([filePath]);
 
@@ -316,8 +319,8 @@ export const deleteProfileImage = async (
       return false;
     }
 
-    // Update the user's profile to remove the avatar URL
-    console.log('Updating profile to remove avatar URL...');
+    // Update the user's profile to remove the avatar URL using the main client
+    console.log('Updating profile to remove avatar URL using main client...');
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ 
@@ -429,8 +432,10 @@ export const resizeImage = async (
 export const getUserAvatars = async (userId: string): Promise<string[]> => {
   try {
     console.log('Getting user avatars from avatars bucket for user:', userId);
+    console.log('Using special storage client for listing avatars');
     
-    const { data, error } = await supabase.storage
+    // Use the special storage client for listing
+    const { data, error } = await supabaseStorage.storage
       .from('avatars')
       .list(userId, {
         limit: 100,
@@ -463,8 +468,10 @@ export const getUserAvatars = async (userId: string): Promise<string[]> => {
 export const cleanupOldAvatars = async (userId: string): Promise<void> => {
   try {
     console.log('Cleaning up old avatars for user:', userId);
+    console.log('Using special storage client for cleanup');
     
-    const { data, error } = await supabase.storage
+    // Use the special storage client for listing and deletion
+    const { data, error } = await supabaseStorage.storage
       .from('avatars')
       .list(userId, {
         limit: 100,
@@ -485,7 +492,7 @@ export const cleanupOldAvatars = async (userId: string): Promise<void> => {
       
       console.log('Deleting', filesToDelete.length, 'old avatars');
       
-      const { error: deleteError } = await supabase.storage
+      const { error: deleteError } = await supabaseStorage.storage
         .from('avatars')
         .remove(filesToDelete);
 
@@ -506,10 +513,10 @@ export const cleanupOldAvatars = async (userId: string): Promise<void> => {
 export const testStorageConnection = async (): Promise<{ success: boolean; message: string }> => {
   try {
     console.log('=== TESTING STORAGE CONNECTION ===');
-    console.log('Testing connection to avatars bucket...');
+    console.log('Testing connection to avatars bucket using storage client...');
     
-    // Try to list buckets to test connection
-    const { data, error } = await supabase.storage.listBuckets();
+    // Try to list buckets to test connection using the special storage client
+    const { data, error } = await supabaseStorage.storage.listBuckets();
     
     if (error) {
       console.error('Storage connection test failed:', error);
@@ -533,8 +540,8 @@ export const testStorageConnection = async (): Promise<{ success: boolean; messa
     
     console.log('Avatars bucket found:', avatarsBucket);
     
-    // Test listing objects in the avatars bucket
-    const { data: objects, error: listError } = await supabase.storage
+    // Test listing objects in the avatars bucket using the special storage client
+    const { data: objects, error: listError } = await supabaseStorage.storage
       .from('avatars')
       .list('', { limit: 1 });
     

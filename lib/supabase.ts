@@ -5,10 +5,21 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = 'https://asugynuigbnrsynczdhe.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzdWd5bnVpZ2JucnN5bmN6ZGhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxNDQ4NzMsImV4cCI6MjA2MjcyMDg3M30.eQ1HGBxrbdaDOS2ry-YVgyh2kJ54gOZKHSjXz4xXxf8';
 
+// Main Supabase client for all database operations (auth, events, profiles, etc.)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
+    detectSessionInUrl: false,
+  },
+});
+
+// Separate client for profile image storage operations only
+const supabaseStorageKey = 'sbp_a7a05f45f57d33e20981b2ba582636bfa0b873ab';
+export const supabaseStorage = createClient(supabaseUrl, supabaseStorageKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
     detectSessionInUrl: false,
   },
 });

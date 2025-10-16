@@ -19,55 +19,64 @@ export default function SignupScreen() {
     email: '',
     password: '',
     confirmPassword: '',
-    phone: '',
-    skillLevel: 'Anfänger',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const skillLevels = ['Anfänger', 'Fortgeschritten', 'Experte'];
+  const updateFormData = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
   const handleSignup = async () => {
     // Validation
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
-      Alert.alert('Fehler', 'Bitte fülle alle Pflichtfelder aus.');
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword) {
+      Alert.alert('Fehler', 'Bitte fülle alle Felder aus.');
       return;
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      Alert.alert('Ungültige E-Mail', 'Bitte gib eine gültige E-Mail-Adresse ein.');
+      return;
+    }
+
+    // Validate password length
+    if (formData.password.length < 6) {
+      Alert.alert('Passwort zu kurz', 'Das Passwort muss mindestens 6 Zeichen lang sein.');
+      return;
+    }
+
+    // Check if passwords match
     if (formData.password !== formData.confirmPassword) {
       Alert.alert('Fehler', 'Die Passwörter stimmen nicht überein.');
       return;
     }
 
-    if (formData.password.length < 6) {
-      Alert.alert('Fehler', 'Das Passwort muss mindestens 6 Zeichen lang sein.');
-      return;
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      Alert.alert('Fehler', 'Bitte gib eine gültige E-Mail-Adresse ein.');
-      return;
-    }
-
     setIsLoading(true);
-    console.log('SignupScreen: Attempting signup for:', formData.email);
+    console.log('SignupScreen: Attempting signup for:', formData.email.trim());
 
     try {
-      const result = await signUp(formData.email, formData.password, formData.firstName, formData.lastName);
+      const result = await signUp(
+        formData.email.trim(),
+        formData.password,
+        formData.firstName.trim(),
+        formData.lastName.trim()
+      );
+
       console.log('SignupScreen: Signup successful');
       
       // Mark onboarding as completed
       await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
-      
+
+      // Show success message with email confirmation instructions
       Alert.alert(
         'Registrierung erfolgreich!',
-        'Dein Konto wurde erstellt. Bitte überprüfe deine E-Mails und bestätige deine E-Mail-Adresse, bevor du dich anmeldest.',
+        'Dein Konto wurde erstellt.\n\n📧 WICHTIG: Bitte bestätige deine E-Mail-Adresse!\n\nWir haben dir eine Bestätigungs-E-Mail an ' + formData.email + ' gesendet.\n\nBitte:\n1. Öffne dein E-Mail-Postfach\n2. Suche nach der Bestätigungs-E-Mail (auch im Spam-Ordner)\n3. Klicke auf den Bestätigungslink\n4. Danach kannst du dich anmelden',
         [
           {
-            text: 'OK',
+            text: 'Verstanden',
             onPress: () => {
               console.log('SignupScreen: Redirecting to login');
               router.replace('/auth/login');
@@ -77,23 +86,32 @@ export default function SignupScreen() {
       );
     } catch (error: any) {
       console.error('SignupScreen: Signup error:', error);
+      console.error('SignupScreen: Error details:', JSON.stringify(error, null, 2));
+      
+      let errorTitle = 'Registrierung fehlgeschlagen';
       let errorMessage = 'Ein unerwarteter Fehler ist aufgetreten.';
       
       if (error.message) {
-        if (error.message.includes('User already registered')) {
-          errorMessage = 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits.';
-        } else if (error.message.includes('Password should be at least 6 characters')) {
-          errorMessage = 'Das Passwort muss mindestens 6 Zeichen lang sein.';
-        } else if (error.message.includes('Invalid email')) {
+        const errorMsg = error.message.toLowerCase();
+        
+        if (errorMsg.includes('user already registered') || errorMsg.includes('already exists')) {
+          errorTitle = 'E-Mail bereits registriert';
+          errorMessage = 'Diese E-Mail-Adresse ist bereits registriert.\n\nBitte melde dich an oder verwende eine andere E-Mail-Adresse.';
+        } else if (errorMsg.includes('password')) {
+          errorTitle = 'Ungültiges Passwort';
+          errorMessage = 'Das Passwort erfüllt nicht die Anforderungen. Es muss mindestens 6 Zeichen lang sein.';
+        } else if (errorMsg.includes('email')) {
+          errorTitle = 'Ungültige E-Mail';
           errorMessage = 'Bitte gib eine gültige E-Mail-Adresse ein.';
-        } else if (error.message.includes('Signup is disabled')) {
-          errorMessage = 'Die Registrierung ist derzeit deaktiviert. Bitte kontaktiere den Administrator.';
+        } else if (errorMsg.includes('network') || errorMsg.includes('fetch')) {
+          errorTitle = 'Verbindungsfehler';
+          errorMessage = 'Es konnte keine Verbindung zum Server hergestellt werden. Bitte überprüfe deine Internetverbindung.';
         } else {
           errorMessage = error.message;
         }
       }
       
-      Alert.alert('Registrierung fehlgeschlagen', errorMessage);
+      Alert.alert(errorTitle, errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -109,216 +127,184 @@ export default function SignupScreen() {
     router.push('/onboarding');
   };
 
-  const updateFormData = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
   return (
     <SafeAreaView style={commonStyles.container}>
-      <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 30 }}>
-          <TouchableOpacity onPress={handleBack} style={{ marginRight: 16 }} disabled={isLoading}>
-            <Icon name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[commonStyles.title, { color: colors.primary }]}>Registrieren</Text>
-        </View>
-
-        {/* Logo */}
-        <Image
-          source={require('../../assets/images/c0025ffd-25dc-49f5-9153-918105ed49ee.png')}
-          style={{
-            width: 80,
-            height: 80,
-            alignSelf: 'center',
-            marginBottom: 30,
-            resizeMode: 'contain',
-          }}
-        />
-
-        <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 30 }]}>
-          Erstelle dein Konto für den Pickleball Salzburg Union
-        </Text>
-
-        {/* Signup Form */}
-        <View style={{ marginBottom: 30 }}>
-          {/* Name Fields */}
-          <View style={{ flexDirection: 'row', marginBottom: 16 }}>
-            <View style={{ flex: 1, marginRight: 8 }}>
-              <Text style={[commonStyles.textLight, { marginBottom: 8 }]}>Vorname *</Text>
-              <TextInput
-                style={commonStyles.input}
-                value={formData.firstName}
-                onChangeText={(value) => updateFormData('firstName', value)}
-                placeholder="Max"
-                placeholderTextColor={colors.textLight}
-                autoCapitalize="words"
-                editable={!isLoading}
-              />
-            </View>
-            <View style={{ flex: 1, marginLeft: 8 }}>
-              <Text style={[commonStyles.textLight, { marginBottom: 8 }]}>Nachname *</Text>
-              <TextInput
-                style={commonStyles.input}
-                value={formData.lastName}
-                onChangeText={(value) => updateFormData('lastName', value)}
-                placeholder="Mustermann"
-                placeholderTextColor={colors.textLight}
-                autoCapitalize="words"
-                editable={!isLoading}
-              />
-            </View>
+      <ScrollView 
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={commonStyles.content}>
+          {/* Header */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 30 }}>
+            <TouchableOpacity onPress={handleBack} style={{ marginRight: 16 }}>
+              <Icon name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={[commonStyles.title, { color: colors.primary }]}>Registrieren</Text>
           </View>
 
-          {/* Email */}
-          <Text style={[commonStyles.textLight, { marginBottom: 8 }]}>E-Mail *</Text>
-          <TextInput
-            style={commonStyles.input}
-            value={formData.email}
-            onChangeText={(value) => updateFormData('email', value)}
-            placeholder="deine@email.com"
-            placeholderTextColor={colors.textLight}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!isLoading}
+          {/* Logo */}
+          <Image
+            source={require('../../assets/images/c0025ffd-25dc-49f5-9153-918105ed49ee.png')}
+            style={{
+              width: 80,
+              height: 80,
+              alignSelf: 'center',
+              marginBottom: 30,
+              resizeMode: 'contain',
+            }}
           />
 
-          {/* Phone */}
-          <Text style={[commonStyles.textLight, { marginBottom: 8 }]}>Telefon (optional)</Text>
-          <TextInput
-            style={commonStyles.input}
-            value={formData.phone}
-            onChangeText={(value) => updateFormData('phone', value)}
-            placeholder="+43 123 456 7890"
-            placeholderTextColor={colors.textLight}
-            keyboardType="phone-pad"
-            editable={!isLoading}
-          />
+          <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 30 }]}>
+            Erstelle dein Konto
+          </Text>
 
-          {/* Skill Level */}
-          <Text style={[commonStyles.textLight, { marginBottom: 8 }]}>Spielstärke</Text>
-          <View style={{ flexDirection: 'row', marginBottom: 16 }}>
-            {skillLevels.map((level) => (
+          {/* Signup Form */}
+          <View style={{ marginBottom: 30 }}>
+            <Text style={[commonStyles.textLight, { marginBottom: 8 }]}>Vorname</Text>
+            <TextInput
+              style={commonStyles.input}
+              value={formData.firstName}
+              onChangeText={(value) => updateFormData('firstName', value)}
+              placeholder="Max"
+              placeholderTextColor={colors.textLight}
+              autoCapitalize="words"
+              editable={!isLoading}
+              autoComplete="given-name"
+            />
+
+            <Text style={[commonStyles.textLight, { marginBottom: 8, marginTop: 16 }]}>Nachname</Text>
+            <TextInput
+              style={commonStyles.input}
+              value={formData.lastName}
+              onChangeText={(value) => updateFormData('lastName', value)}
+              placeholder="Mustermann"
+              placeholderTextColor={colors.textLight}
+              autoCapitalize="words"
+              editable={!isLoading}
+              autoComplete="family-name"
+            />
+
+            <Text style={[commonStyles.textLight, { marginBottom: 8, marginTop: 16 }]}>E-Mail</Text>
+            <TextInput
+              style={commonStyles.input}
+              value={formData.email}
+              onChangeText={(value) => updateFormData('email', value)}
+              placeholder="deine@email.com"
+              placeholderTextColor={colors.textLight}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isLoading}
+              autoComplete="email"
+            />
+
+            <Text style={[commonStyles.textLight, { marginBottom: 8, marginTop: 16 }]}>Passwort</Text>
+            <View style={{ position: 'relative' }}>
+              <TextInput
+                style={commonStyles.input}
+                value={formData.password}
+                onChangeText={(value) => updateFormData('password', value)}
+                placeholder="Mindestens 6 Zeichen"
+                placeholderTextColor={colors.textLight}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isLoading}
+                autoComplete="password-new"
+              />
               <TouchableOpacity
-                key={level}
-                style={[
-                  {
-                    flex: 1,
-                    paddingVertical: 12,
-                    paddingHorizontal: 8,
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    marginHorizontal: 4,
-                    alignItems: 'center',
-                  },
-                  formData.skillLevel === level
-                    ? { backgroundColor: colors.primary, borderColor: colors.primary }
-                    : { backgroundColor: 'transparent', borderColor: colors.border }
-                ]}
-                onPress={() => updateFormData('skillLevel', level)}
+                style={{
+                  position: 'absolute',
+                  right: 16,
+                  top: 12,
+                  padding: 4,
+                }}
+                onPress={() => setShowPassword(!showPassword)}
                 disabled={isLoading}
               >
-                <Text style={[
-                  { fontSize: 14, fontWeight: '500' },
-                  formData.skillLevel === level
-                    ? { color: colors.white }
-                    : { color: colors.text }
-                ]}>
-                  {level}
-                </Text>
+                <Icon 
+                  name={showPassword ? "eye-off" : "eye"} 
+                  size={20} 
+                  color={colors.textLight} 
+                />
               </TouchableOpacity>
-            ))}
-          </View>
+            </View>
 
-          {/* Password */}
-          <Text style={[commonStyles.textLight, { marginBottom: 8 }]}>Passwort *</Text>
-          <View style={{ position: 'relative', marginBottom: 16 }}>
-            <TextInput
-              style={commonStyles.input}
-              value={formData.password}
-              onChangeText={(value) => updateFormData('password', value)}
-              placeholder="Mindestens 6 Zeichen"
-              placeholderTextColor={colors.textLight}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!isLoading}
-            />
-            <TouchableOpacity
-              style={{
-                position: 'absolute',
-                right: 16,
-                top: 12,
-                padding: 4,
-              }}
-              onPress={() => setShowPassword(!showPassword)}
-              disabled={isLoading}
-            >
-              <Icon 
-                name={showPassword ? "eye-off" : "eye"} 
-                size={20} 
-                color={colors.textLight} 
+            <Text style={[commonStyles.textLight, { marginBottom: 8, marginTop: 16 }]}>Passwort bestätigen</Text>
+            <View style={{ position: 'relative' }}>
+              <TextInput
+                style={commonStyles.input}
+                value={formData.confirmPassword}
+                onChangeText={(value) => updateFormData('confirmPassword', value)}
+                placeholder="Passwort wiederholen"
+                placeholderTextColor={colors.textLight}
+                secureTextEntry={!showConfirmPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isLoading}
+                autoComplete="password-new"
               />
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  position: 'absolute',
+                  right: 16,
+                  top: 12,
+                  padding: 4,
+                }}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                disabled={isLoading}
+              >
+                <Icon 
+                  name={showConfirmPassword ? "eye-off" : "eye"} 
+                  size={20} 
+                  color={colors.textLight} 
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {/* Confirm Password */}
-          <Text style={[commonStyles.textLight, { marginBottom: 8 }]}>Passwort bestätigen *</Text>
-          <View style={{ position: 'relative' }}>
-            <TextInput
-              style={commonStyles.input}
-              value={formData.confirmPassword}
-              onChangeText={(value) => updateFormData('confirmPassword', value)}
-              placeholder="Passwort wiederholen"
-              placeholderTextColor={colors.textLight}
-              secureTextEntry={!showConfirmPassword}
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!isLoading}
-            />
-            <TouchableOpacity
-              style={{
-                position: 'absolute',
-                right: 16,
-                top: 12,
-                padding: 4,
-              }}
-              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-              disabled={isLoading}
-            >
-              <Icon 
-                name={showConfirmPassword ? "eye-off" : "eye"} 
-                size={20} 
-                color={colors.textLight} 
-              />
-            </TouchableOpacity>
+          {/* Important Notice */}
+          <View style={{
+            backgroundColor: colors.primary + '20',
+            padding: 16,
+            borderRadius: 8,
+            marginBottom: 20,
+            borderLeftWidth: 4,
+            borderLeftColor: colors.primary,
+          }}>
+            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
+              📧 Wichtig: E-Mail-Bestätigung
+            </Text>
+            <Text style={[commonStyles.textLight, { fontSize: 14 }]}>
+              Nach der Registrierung erhältst du eine Bestätigungs-E-Mail. Du musst deine E-Mail-Adresse bestätigen, bevor du dich anmelden kannst.
+            </Text>
           </View>
-        </View>
 
-        {/* Signup Button */}
-        <TouchableOpacity
-          style={[
-            buttonStyles.primary,
-            { width: '100%', marginBottom: 20 },
-            isLoading && { backgroundColor: colors.textLight }
-          ]}
-          onPress={handleSignup}
-          disabled={isLoading}
-        >
-          <Text style={commonStyles.buttonTextWhite}>
-            {isLoading ? 'Registrierung läuft...' : 'Registrieren'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Login Link */}
-        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
-          <Text style={commonStyles.textLight}>Bereits ein Konto? </Text>
-          <TouchableOpacity onPress={handleLogin} disabled={isLoading}>
-            <Text style={[commonStyles.textLight, { color: colors.primary, fontWeight: '600' }]}>
-              Anmelden
+          {/* Signup Button */}
+          <TouchableOpacity
+            style={[
+              buttonStyles.primary,
+              { width: '100%', marginBottom: 20 },
+              isLoading && { backgroundColor: colors.textLight }
+            ]}
+            onPress={handleSignup}
+            disabled={isLoading}
+          >
+            <Text style={commonStyles.buttonTextWhite}>
+              {isLoading ? 'Registrieren...' : 'Registrieren'}
             </Text>
           </TouchableOpacity>
+
+          {/* Login Link */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={commonStyles.textLight}>Bereits ein Konto? </Text>
+            <TouchableOpacity onPress={handleLogin} disabled={isLoading}>
+              <Text style={[commonStyles.textLight, { color: colors.primary, fontWeight: '600' }]}>
+                Anmelden
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

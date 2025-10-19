@@ -4,10 +4,11 @@ import { Text, View, ScrollView, TouchableOpacity, Alert, Linking } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Icon from '../../components/Icon';
-import { commonStyles, colors } from '../../styles/commonStyles';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function HelpScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
 
   const handleBack = () => {
     router.back();
@@ -63,8 +64,12 @@ export default function HelpScreen() {
   ];
 
   return (
-    <SafeAreaView style={commonStyles.container}>
-      <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView 
+        style={{ flex: 1 }} 
+        contentContainerStyle={{ padding: 20 }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header with Back Button */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 30 }}>
           <TouchableOpacity
@@ -73,23 +78,39 @@ export default function HelpScreen() {
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: colors.white,
+              backgroundColor: colors.backgroundSecondary,
               alignItems: 'center',
               justifyContent: 'center',
               marginRight: 16,
-              ...commonStyles.shadow,
             }}
           >
             <Icon name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[commonStyles.title, { color: colors.primary, flex: 1 }]}>
+          <Text style={{ 
+            fontSize: 28,
+            fontWeight: 'bold',
+            color: colors.primary, 
+            flex: 1,
+          }}>
             Hilfe & Support
           </Text>
         </View>
 
         {/* Contact Support */}
-        <View style={[commonStyles.card, { marginBottom: 20 }]}>
-          <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16 }]}>
+        <View style={{
+          backgroundColor: colors.surface,
+          borderRadius: 16,
+          padding: 20,
+          marginBottom: 20,
+          borderWidth: 1,
+          borderColor: colors.border,
+        }}>
+          <Text style={{ 
+            fontSize: 16,
+            fontWeight: '600', 
+            marginBottom: 16,
+            color: colors.text,
+          }}>
             Support kontaktieren
           </Text>
           
@@ -104,8 +125,8 @@ export default function HelpScreen() {
           >
             <Icon name="mail" size={20} color={colors.primary} style={{ marginRight: 12 }} />
             <View style={{ flex: 1 }}>
-              <Text style={commonStyles.text}>E-Mail Support</Text>
-              <Text style={[commonStyles.textLight, { fontSize: 12 }]}>
+              <Text style={{ fontSize: 16, color: colors.text }}>E-Mail Support</Text>
+              <Text style={{ fontSize: 12, color: colors.textLight }}>
                 support@pickleball-salzburg.at
               </Text>
             </View>
@@ -122,8 +143,8 @@ export default function HelpScreen() {
           >
             <Icon name="globe" size={20} color={colors.primary} style={{ marginRight: 12 }} />
             <View style={{ flex: 1 }}>
-              <Text style={commonStyles.text}>Website besuchen</Text>
-              <Text style={[commonStyles.textLight, { fontSize: 12 }]}>
+              <Text style={{ fontSize: 16, color: colors.text }}>Website besuchen</Text>
+              <Text style={{ fontSize: 12, color: colors.textLight }}>
                 pickleball-salzburg.at
               </Text>
             </View>
@@ -132,17 +153,38 @@ export default function HelpScreen() {
         </View>
 
         {/* FAQ */}
-        <View style={[commonStyles.card, { marginBottom: 20 }]}>
-          <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16 }]}>
+        <View style={{
+          backgroundColor: colors.surface,
+          borderRadius: 16,
+          padding: 20,
+          marginBottom: 20,
+          borderWidth: 1,
+          borderColor: colors.border,
+        }}>
+          <Text style={{ 
+            fontSize: 16,
+            fontWeight: '600', 
+            marginBottom: 16,
+            color: colors.text,
+          }}>
             Häufig gestellte Fragen
           </Text>
           
           {faqItems.map((item, index) => (
             <View key={index} style={{ marginBottom: index < faqItems.length - 1 ? 16 : 0 }}>
-              <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
+              <Text style={{ 
+                fontSize: 15,
+                fontWeight: '600', 
+                marginBottom: 8,
+                color: colors.text,
+              }}>
                 {item.question}
               </Text>
-              <Text style={[commonStyles.textLight, { lineHeight: 20 }]}>
+              <Text style={{ 
+                lineHeight: 20,
+                fontSize: 14,
+                color: colors.textSecondary,
+              }}>
                 {item.answer}
               </Text>
               {index < faqItems.length - 1 && (
@@ -157,29 +199,48 @@ export default function HelpScreen() {
         </View>
 
         {/* App Features */}
-        <View style={[commonStyles.card]}>
-          <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16 }]}>
+        <View style={{
+          backgroundColor: colors.surface,
+          borderRadius: 16,
+          padding: 20,
+          borderWidth: 1,
+          borderColor: colors.border,
+        }}>
+          <Text style={{ 
+            fontSize: 16,
+            fontWeight: '600', 
+            marginBottom: 16,
+            color: colors.text,
+          }}>
             App-Features
           </Text>
           
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
             <Icon name="calendar" size={16} color={colors.primary} style={{ marginRight: 8 }} />
-            <Text style={commonStyles.textLight}>Event-Verwaltung und Anmeldung</Text>
+            <Text style={{ fontSize: 14, color: colors.textSecondary }}>
+              Event-Verwaltung und Anmeldung
+            </Text>
           </View>
           
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
             <Icon name="newspaper" size={16} color={colors.primary} style={{ marginRight: 8 }} />
-            <Text style={commonStyles.textLight}>Aktuelle Nachrichten und Updates</Text>
+            <Text style={{ fontSize: 14, color: colors.textSecondary }}>
+              Aktuelle Nachrichten und Updates
+            </Text>
           </View>
           
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
             <Icon name="qr-code" size={16} color={colors.primary} style={{ marginRight: 8 }} />
-            <Text style={commonStyles.textLight}>QR-Code für schnelle Identifikation</Text>
+            <Text style={{ fontSize: 14, color: colors.textSecondary }}>
+              QR-Code für schnelle Identifikation
+            </Text>
           </View>
           
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Icon name="person" size={16} color={colors.primary} style={{ marginRight: 8 }} />
-            <Text style={commonStyles.textLight}>Persönliches Profil-Management</Text>
+            <Text style={{ fontSize: 14, color: colors.textSecondary }}>
+              Persönliches Profil-Management
+            </Text>
           </View>
         </View>
       </ScrollView>

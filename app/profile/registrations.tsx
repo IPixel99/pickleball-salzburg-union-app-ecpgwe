@@ -6,10 +6,11 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from '../../components/Icon';
 import EventRegistrations from '../../components/EventRegistrations';
-import { commonStyles, colors } from '../../styles/commonStyles';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function RegistrationsScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleBack = () => {
@@ -37,7 +38,7 @@ export default function RegistrationsScreen() {
   );
 
   return (
-    <SafeAreaView style={commonStyles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <View style={{
         flexDirection: 'row',
@@ -46,6 +47,7 @@ export default function RegistrationsScreen() {
         paddingVertical: 16,
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
+        backgroundColor: colors.surface,
       }}>
         <TouchableOpacity
           onPress={handleBack}
@@ -53,7 +55,7 @@ export default function RegistrationsScreen() {
             width: 40,
             height: 40,
             borderRadius: 20,
-            backgroundColor: colors.background,
+            backgroundColor: colors.backgroundSecondary,
             justifyContent: 'center',
             alignItems: 'center',
             marginRight: 16,
@@ -63,10 +65,18 @@ export default function RegistrationsScreen() {
         </TouchableOpacity>
         
         <View style={{ flex: 1 }}>
-          <Text style={[commonStyles.title, { color: colors.primary }]}>
+          <Text style={{
+            fontSize: 24,
+            fontWeight: 'bold',
+            color: colors.primary,
+            marginBottom: 2,
+          }}>
             Meine Anmeldungen
           </Text>
-          <Text style={commonStyles.textLight}>
+          <Text style={{
+            fontSize: 14,
+            color: colors.textSecondary,
+          }}>
             Alle deine registrierten Events
           </Text>
         </View>

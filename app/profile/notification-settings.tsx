@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Text, View, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
+import { useTheme } from '../../contexts/ThemeContext';
 import Icon from '../../components/Icon';
 import { 
   checkNotificationPermissions, 
@@ -22,6 +22,7 @@ interface NotificationPreferences {
 
 export default function NotificationSettingsScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [permissionsGranted, setPermissionsGranted] = useState(false);
   const [scheduledCount, setScheduledCount] = useState(0);
   const [preferences, setPreferences] = useState<NotificationPreferences>({
@@ -93,8 +94,12 @@ export default function NotificationSettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={commonStyles.container}>
-      <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView 
+        style={{ flex: 1 }} 
+        contentContainerStyle={{ padding: 20 }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 30 }}>
           <TouchableOpacity
@@ -112,13 +117,31 @@ export default function NotificationSettingsScreen() {
             <Icon name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={commonStyles.title}>Benachrichtigungen</Text>
-            <Text style={commonStyles.textLight}>Verwalte deine Benachrichtigungen</Text>
+            <Text style={{ 
+              fontSize: 28,
+              fontWeight: 'bold',
+              color: colors.text,
+            }}>
+              Benachrichtigungen
+            </Text>
+            <Text style={{ 
+              fontSize: 14,
+              color: colors.textSecondary,
+            }}>
+              Verwalte deine Benachrichtigungen
+            </Text>
           </View>
         </View>
 
         {/* Permission Status */}
-        <View style={[commonStyles.card, { marginBottom: 20 }]}>
+        <View style={{
+          backgroundColor: colors.surface,
+          borderRadius: 16,
+          padding: 20,
+          marginBottom: 20,
+          borderWidth: 1,
+          borderColor: colors.border,
+        }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
             <View
               style={{
@@ -138,10 +161,18 @@ export default function NotificationSettingsScreen() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
+              <Text style={{ 
+                fontSize: 16,
+                fontWeight: '600', 
+                marginBottom: 4,
+                color: colors.text,
+              }}>
                 {permissionsGranted ? 'Benachrichtigungen aktiviert' : 'Benachrichtigungen deaktiviert'}
               </Text>
-              <Text style={commonStyles.textLight}>
+              <Text style={{ 
+                fontSize: 14,
+                color: colors.textSecondary,
+              }}>
                 {permissionsGranted
                   ? `${scheduledCount} geplante Benachrichtigungen`
                   : 'Aktiviere Benachrichtigungen für Updates'}
@@ -151,10 +182,22 @@ export default function NotificationSettingsScreen() {
 
           {!permissionsGranted && (
             <TouchableOpacity
-              style={[buttonStyles.primary, { marginTop: 12 }]}
+              style={{
+                backgroundColor: colors.primary,
+                borderRadius: 12,
+                padding: 16,
+                marginTop: 12,
+              }}
               onPress={handleRequestPermissions}
             >
-              <Text style={commonStyles.buttonTextWhite}>Benachrichtigungen aktivieren</Text>
+              <Text style={{ 
+                color: colors.white,
+                fontSize: 16,
+                fontWeight: '600',
+                textAlign: 'center',
+              }}>
+                Benachrichtigungen aktivieren
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -162,19 +205,40 @@ export default function NotificationSettingsScreen() {
         {/* Notification Preferences */}
         {permissionsGranted && (
           <>
-            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16, fontSize: 18 }]}>
+            <Text style={{ 
+              fontSize: 18,
+              fontWeight: '600', 
+              marginBottom: 16,
+              color: colors.text,
+            }}>
               Benachrichtigungstypen
             </Text>
 
             {/* Event Reminders */}
-            <View style={[commonStyles.card, { marginBottom: 16 }]}>
+            <View style={{
+              backgroundColor: colors.surface,
+              borderRadius: 16,
+              padding: 20,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flex: 1, marginRight: 16 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                     <Icon name="notifications" size={20} color={colors.primary} style={{ marginRight: 8 }} />
-                    <Text style={[commonStyles.text, { fontWeight: '600' }]}>Event-Erinnerungen</Text>
+                    <Text style={{ 
+                      fontSize: 16,
+                      fontWeight: '600',
+                      color: colors.text,
+                    }}>
+                      Event-Erinnerungen
+                    </Text>
                   </View>
-                  <Text style={commonStyles.textLight}>
+                  <Text style={{ 
+                    fontSize: 14,
+                    color: colors.textSecondary,
+                  }}>
                     Erhalte Erinnerungen 1 Stunde vor Events
                   </Text>
                 </View>
@@ -188,14 +252,30 @@ export default function NotificationSettingsScreen() {
             </View>
 
             {/* Event Registrations */}
-            <View style={[commonStyles.card, { marginBottom: 16 }]}>
+            <View style={{
+              backgroundColor: colors.surface,
+              borderRadius: 16,
+              padding: 20,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flex: 1, marginRight: 16 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                     <Icon name="checkmark-circle" size={20} color={colors.success} style={{ marginRight: 8 }} />
-                    <Text style={[commonStyles.text, { fontWeight: '600' }]}>Anmeldebestätigungen</Text>
+                    <Text style={{ 
+                      fontSize: 16,
+                      fontWeight: '600',
+                      color: colors.text,
+                    }}>
+                      Anmeldebestätigungen
+                    </Text>
                   </View>
-                  <Text style={commonStyles.textLight}>
+                  <Text style={{ 
+                    fontSize: 14,
+                    color: colors.textSecondary,
+                  }}>
                     Bestätigungen bei Event-Anmeldungen
                   </Text>
                 </View>
@@ -209,14 +289,30 @@ export default function NotificationSettingsScreen() {
             </View>
 
             {/* News Updates */}
-            <View style={[commonStyles.card, { marginBottom: 16 }]}>
+            <View style={{
+              backgroundColor: colors.surface,
+              borderRadius: 16,
+              padding: 20,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flex: 1, marginRight: 16 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                    <Icon name="newspaper" size={20} color={colors.yellow} style={{ marginRight: 8 }} />
-                    <Text style={[commonStyles.text, { fontWeight: '600' }]}>Nachrichten-Updates</Text>
+                    <Icon name="newspaper" size={20} color={colors.accent} style={{ marginRight: 8 }} />
+                    <Text style={{ 
+                      fontSize: 16,
+                      fontWeight: '600',
+                      color: colors.text,
+                    }}>
+                      Nachrichten-Updates
+                    </Text>
                   </View>
-                  <Text style={commonStyles.textLight}>
+                  <Text style={{ 
+                    fontSize: 14,
+                    color: colors.textSecondary,
+                  }}>
                     Benachrichtigungen bei neuen Nachrichten
                   </Text>
                 </View>
@@ -232,14 +328,29 @@ export default function NotificationSettingsScreen() {
         )}
 
         {/* Info Card */}
-        <View style={[commonStyles.card, { backgroundColor: colors.primaryLight, marginTop: 20 }]}>
+        <View style={{
+          backgroundColor: colors.primary + '15',
+          borderRadius: 16,
+          padding: 20,
+          marginTop: 20,
+          borderWidth: 1,
+          borderColor: colors.primary + '30',
+        }}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
             <Icon name="information-circle" size={24} color={colors.primary} style={{ marginRight: 12 }} />
             <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
+              <Text style={{ 
+                fontSize: 16,
+                fontWeight: '600', 
+                marginBottom: 8,
+                color: colors.text,
+              }}>
                 Über Benachrichtigungen
               </Text>
-              <Text style={commonStyles.textLight}>
+              <Text style={{ 
+                fontSize: 14,
+                color: colors.textSecondary,
+              }}>
                 Benachrichtigungen helfen dir, keine Events zu verpassen und über Neuigkeiten informiert zu bleiben.
               </Text>
             </View>

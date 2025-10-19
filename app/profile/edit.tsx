@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
+import { useTheme } from '../../contexts/ThemeContext';
 import Icon from '../../components/Icon';
 import ProfileImageManager from '../../components/ProfileImageManager';
 import { getLocalImage, saveImageLocally } from '../../utils/localImageStorage';
@@ -23,6 +23,7 @@ interface Profile {
 export default function EditProfileScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const { colors } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -200,9 +201,18 @@ export default function EditProfileScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[commonStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <SafeAreaView style={{ 
+        flex: 1, 
+        backgroundColor: colors.background,
+        justifyContent: 'center', 
+        alignItems: 'center' 
+      }}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[commonStyles.text, { marginTop: 16 }]}>
+        <Text style={{ 
+          marginTop: 16,
+          fontSize: 16,
+          color: colors.text,
+        }}>
           Lade Profil...
         </Text>
       </SafeAreaView>
@@ -210,25 +220,50 @@ export default function EditProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={commonStyles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
-      <View style={[commonStyles.header, { paddingHorizontal: 20 }]}>
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        backgroundColor: colors.surface,
+      }}>
         <TouchableOpacity
-          style={commonStyles.headerButton}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: colors.backgroundSecondary,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
           onPress={handleBack}
         >
           <Icon name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         
-        <Text style={commonStyles.headerTitle}>
+        <Text style={{
+          fontSize: 18,
+          fontWeight: '600',
+          color: colors.text,
+        }}>
           Profil bearbeiten
         </Text>
         
         <TouchableOpacity
-          style={[
-            commonStyles.headerButton,
-            saving && { opacity: 0.6 }
-          ]}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: colors.backgroundSecondary,
+            justifyContent: 'center',
+            alignItems: 'center',
+            opacity: saving ? 0.6 : 1,
+          }}
           onPress={handleSave}
           disabled={saving}
         >
@@ -252,63 +287,134 @@ export default function EditProfileScreen() {
         />
 
         {/* Form Fields */}
-        <View style={commonStyles.card}>
-          <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16 }]}>
+        <View style={{
+          backgroundColor: colors.surface,
+          borderRadius: 16,
+          padding: 20,
+          marginTop: 20,
+          borderWidth: 1,
+          borderColor: colors.border,
+        }}>
+          <Text style={{ 
+            fontSize: 16,
+            fontWeight: '600', 
+            marginBottom: 16,
+            color: colors.text,
+          }}>
             Persönliche Informationen
           </Text>
 
           <View style={{ marginBottom: 16 }}>
-            <Text style={[commonStyles.label, { marginBottom: 8 }]}>
+            <Text style={{ 
+              fontSize: 14,
+              fontWeight: '500',
+              marginBottom: 8,
+              color: colors.textSecondary,
+            }}>
               Vorname
             </Text>
             <TextInput
-              style={commonStyles.input}
+              style={{
+                backgroundColor: colors.backgroundSecondary,
+                borderRadius: 12,
+                padding: 16,
+                fontSize: 16,
+                color: colors.text,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
               value={formData.first_name}
               onChangeText={(value) => updateFormData('first_name', value)}
               placeholder="Dein Vorname"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.textLight}
             />
           </View>
 
           <View style={{ marginBottom: 16 }}>
-            <Text style={[commonStyles.label, { marginBottom: 8 }]}>
+            <Text style={{ 
+              fontSize: 14,
+              fontWeight: '500',
+              marginBottom: 8,
+              color: colors.textSecondary,
+            }}>
               Nachname
             </Text>
             <TextInput
-              style={commonStyles.input}
+              style={{
+                backgroundColor: colors.backgroundSecondary,
+                borderRadius: 12,
+                padding: 16,
+                fontSize: 16,
+                color: colors.text,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
               value={formData.last_name}
               onChangeText={(value) => updateFormData('last_name', value)}
               placeholder="Dein Nachname"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.textLight}
             />
           </View>
 
           <View style={{ marginBottom: 16 }}>
-            <Text style={[commonStyles.label, { marginBottom: 8 }]}>
+            <Text style={{ 
+              fontSize: 14,
+              fontWeight: '500',
+              marginBottom: 8,
+              color: colors.textSecondary,
+            }}>
               E-Mail
             </Text>
             <TextInput
-              style={[commonStyles.input, { backgroundColor: colors.background, color: colors.textSecondary }]}
+              style={{
+                backgroundColor: colors.backgroundSecondary,
+                borderRadius: 12,
+                padding: 16,
+                fontSize: 16,
+                color: colors.textLight,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
               value={formData.email}
               editable={false}
               placeholder="E-Mail-Adresse"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.textLight}
             />
-            <Text style={[commonStyles.caption, { marginTop: 4, color: colors.textSecondary }]}>
+            <Text style={{ 
+              marginTop: 4, 
+              fontSize: 12,
+              color: colors.textLight,
+            }}>
               Die E-Mail-Adresse kann nicht geändert werden
             </Text>
           </View>
         </View>
 
         {/* Info Card */}
-        <View style={[commonStyles.card, { backgroundColor: colors.success + '10', marginTop: 20 }]}>
+        <View style={{
+          backgroundColor: colors.success + '15',
+          borderRadius: 16,
+          padding: 20,
+          marginTop: 20,
+          borderWidth: 1,
+          borderColor: colors.success + '30',
+        }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <Icon name="shield-checkmark" size={20} color={colors.success} />
-            <Text style={[commonStyles.text, { fontWeight: '600', marginLeft: 8, color: colors.success }]}>
+            <Text style={{ 
+              fontWeight: '600', 
+              marginLeft: 8, 
+              color: colors.success,
+              fontSize: 16,
+            }}>
               Datenschutz & Lokale Speicherung
             </Text>
           </View>
-          <Text style={[commonStyles.textLight, { lineHeight: 18 }]}>
+          <Text style={{ 
+            lineHeight: 20,
+            fontSize: 14,
+            color: colors.textSecondary,
+          }}>
             Deine Profilbilder werden ausschließlich lokal auf deinem Gerät gespeichert. 
             Dies gewährleistet maximalen Datenschutz und schnelle Ladezeiten. 
             Deine Bilder verlassen niemals dein Gerät.
@@ -317,11 +423,14 @@ export default function EditProfileScreen() {
 
         {/* Save Button */}
         <TouchableOpacity
-          style={[
-            buttonStyles.primary,
-            { marginTop: 30, marginBottom: 20 },
-            saving && { opacity: 0.6 }
-          ]}
+          style={{
+            backgroundColor: colors.primary,
+            borderRadius: 12,
+            padding: 16,
+            marginTop: 30,
+            marginBottom: 20,
+            opacity: saving ? 0.6 : 1,
+          }}
           onPress={handleSave}
           disabled={saving}
         >
@@ -331,7 +440,12 @@ export default function EditProfileScreen() {
             ) : (
               <>
                 <Icon name="checkmark-circle" size={18} color={colors.white} />
-                <Text style={[commonStyles.buttonTextWhite, { marginLeft: 8 }]}>
+                <Text style={{ 
+                  color: colors.white,
+                  fontSize: 16,
+                  fontWeight: '600',
+                  marginLeft: 8,
+                }}>
                   Änderungen speichern
                 </Text>
               </>

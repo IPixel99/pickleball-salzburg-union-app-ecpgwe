@@ -12,7 +12,7 @@ const ONBOARDING_COMPLETED_KEY = 'onboarding_completed';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn, resetPassword } = useAuth();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -36,25 +36,14 @@ export default function LoginScreen() {
 
     try {
       const result = await signIn(email.trim(), password);
-      console.log('LoginScreen: Login successful, user:', result.user?.email);
+      
+      console.log('LoginScreen: Login successful');
       
       // Mark onboarding as completed
       await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
       
-      // Show success message and redirect
-      Alert.alert(
-        'Anmeldung erfolgreich!', 
-        'Du wurdest erfolgreich angemeldet.',
-        [
-          { 
-            text: 'OK', 
-            onPress: () => {
-              console.log('LoginScreen: Redirecting to tabs');
-              router.replace('/(tabs)');
-            }
-          }
-        ]
-      );
+      // Navigate to home
+      router.replace('/(tabs)');
     } catch (error: any) {
       console.error('LoginScreen: Login error:', error);
       console.error('LoginScreen: Error details:', JSON.stringify(error, null, 2));
@@ -65,19 +54,26 @@ export default function LoginScreen() {
       if (error.message) {
         const errorMsg = error.message.toLowerCase();
         
-        if (errorMsg.includes('invalid login credentials') || errorMsg.includes('invalid credentials')) {
-          errorTitle = 'Anmeldung fehlgeschlagen';
-          errorMessage = 'Die E-Mail-Adresse oder das Passwort ist falsch.\n\nMögliche Gründe:\n• Falsche E-Mail oder Passwort\n• E-Mail noch nicht bestätigt\n\nBitte überprüfe deine Anmeldedaten oder bestätige deine E-Mail-Adresse.';
-        } else if (errorMsg.includes('email not confirmed')) {
+        if (errorMsg.includes('email not confirmed')) {
           errorTitle = 'E-Mail nicht bestätigt';
-          errorMessage = 'Bitte bestätige deine E-Mail-Adresse, bevor du dich anmeldest.\n\nÜberprüfe dein E-Mail-Postfach (auch den Spam-Ordner) und klicke auf den Bestätigungslink.';
-        } else if (errorMsg.includes('too many requests')) {
-          errorTitle = 'Zu viele Versuche';
-          errorMessage = 'Zu viele Anmeldeversuche. Bitte warte einen Moment und versuche es erneut.';
+          errorMessage = '📧 Bitte bestätige zuerst deine E-Mail-Adresse!\n\nWir haben dir eine Bestätigungs-E-Mail gesendet. Bitte:\n\n1. Öffne dein E-Mail-Postfach\n2. Suche nach der Bestätigungs-E-Mail (auch im Spam-Ordner)\n3. Klicke auf den Bestätigungslink\n4. Versuche es dann erneut';
+        } else if (errorMsg.includes('invalid login credentials') || 
+                   errorMsg.includes('invalid credentials') ||
+                   errorMsg.includes('wrong password') ||
+                   errorMsg.includes('user not found')) {
+          errorTitle = 'Falsche Anmeldedaten';
+          errorMessage = 'Die E-Mail-Adresse oder das Passwort ist falsch.\n\nBitte überprüfe deine Eingaben und versuche es erneut.';
+        } else if (errorMsg.includes('email')) {
+          errorTitle = 'Ungültige E-Mail';
+          errorMessage = 'Bitte gib eine gültige E-Mail-Adresse ein.';
         } else if (errorMsg.includes('network') || errorMsg.includes('fetch')) {
           errorTitle = 'Verbindungsfehler';
-          errorMessage = 'Es konnte keine Verbindung zum Server hergestellt werden. Bitte überprüfe deine Internetverbindung.';
+          errorMessage = 'Es konnte keine Verbindung zum Server hergestellt werden.\n\nBitte überprüfe deine Internetverbindung und versuche es erneut.';
+        } else if (errorMsg.includes('too many requests')) {
+          errorTitle = 'Zu viele Versuche';
+          errorMessage = 'Du hast zu viele Anmeldeversuche gemacht.\n\nBitte warte ein paar Minuten und versuche es dann erneut.';
         } else {
+          // Show the actual error message if we don't have a specific handler
           errorMessage = error.message;
         }
       }
@@ -88,31 +84,13 @@ export default function LoginScreen() {
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!email) {
-      Alert.alert('E-Mail erforderlich', 'Bitte gib deine E-Mail-Adresse ein, um dein Passwort zurückzusetzen.');
-      return;
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      Alert.alert('Ungültige E-Mail', 'Bitte gib eine gültige E-Mail-Adresse ein.');
-      return;
-    }
-
-    try {
-      console.log('LoginScreen: Resetting password for:', email.trim());
-      await resetPassword(email.trim());
-      Alert.alert(
-        'Passwort zurücksetzen',
-        'Eine E-Mail zum Zurücksetzen deines Passworts wurde an deine E-Mail-Adresse gesendet.\n\nBitte überprüfe auch deinen Spam-Ordner.',
-        [{ text: 'OK' }]
-      );
-    } catch (error: any) {
-      console.error('LoginScreen: Password reset error:', error);
-      Alert.alert('Fehler', 'Beim Zurücksetzen des Passworts ist ein Fehler aufgetreten. Bitte versuche es später erneut.');
-    }
+  const handleForgotPassword = () => {
+    console.log('LoginScreen: Forgot password pressed');
+    Alert.alert(
+      'Passwort vergessen?',
+      'Bitte kontaktiere den Administrator, um dein Passwort zurückzusetzen.',
+      [{ text: 'OK' }]
+    );
   };
 
   const handleSignup = () => {
@@ -154,7 +132,7 @@ export default function LoginScreen() {
           />
 
           <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 30 }]}>
-            Melde dich mit deinem Konto an
+            Willkommen zurück!
           </Text>
 
           {/* Login Form */}
@@ -205,15 +183,33 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* Forgot Password Link */}
             <TouchableOpacity 
               onPress={handleForgotPassword} 
               style={{ alignSelf: 'flex-end', marginTop: 8 }}
               disabled={isLoading}
             >
-              <Text style={[commonStyles.textLight, { color: colors.primary }]}>
+              <Text style={[commonStyles.textLight, { color: colors.primary, fontSize: 14 }]}>
                 Passwort vergessen?
               </Text>
             </TouchableOpacity>
+          </View>
+
+          {/* Important Notice */}
+          <View style={{
+            backgroundColor: colors.primary + '20',
+            padding: 16,
+            borderRadius: 8,
+            marginBottom: 20,
+            borderLeftWidth: 4,
+            borderLeftColor: colors.primary,
+          }}>
+            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
+              📧 E-Mail-Bestätigung erforderlich
+            </Text>
+            <Text style={[commonStyles.textLight, { fontSize: 14 }]}>
+              Falls du dich gerade registriert hast, musst du zuerst deine E-Mail-Adresse bestätigen, bevor du dich anmelden kannst.
+            </Text>
           </View>
 
           {/* Login Button */}
@@ -240,27 +236,6 @@ export default function LoginScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-
-          {/* Debug Info (only visible in development) */}
-          {__DEV__ && (
-            <View style={{ 
-              marginTop: 40, 
-              padding: 16, 
-              backgroundColor: colors.background, 
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: colors.border 
-            }}>
-              <Text style={[commonStyles.textLight, { fontSize: 12, marginBottom: 8 }]}>
-                Debug-Info:
-              </Text>
-              <Text style={[commonStyles.textLight, { fontSize: 10 }]}>
-                • Stelle sicher, dass deine E-Mail bestätigt ist{'\n'}
-                • Überprüfe Groß-/Kleinschreibung{'\n'}
-                • Prüfe auf Leerzeichen vor/nach der E-Mail
-              </Text>
-            </View>
-          )}
         </View>
       </ScrollView>
     </SafeAreaView>

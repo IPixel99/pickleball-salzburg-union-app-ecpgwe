@@ -30,6 +30,12 @@ export function useAuth() {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // When user confirms email, create/update their profile
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('useAuth: User signed in, checking profile');
+          await ensureProfileExists(session.user);
+        }
       }
     );
 
@@ -38,6 +44,62 @@ export function useAuth() {
       subscription.unsubscribe();
     };
   }, []);
+
+  const ensureProfileExists = async (user: User) => {
+    try {
+      console.log('useAuth: Ensuring profile exists for user:', user.email);
+      
+      // Check if profile exists
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        // PGRST116 is "not found" error, which is expected for new users
+        console.error('useAuth: Error fetching profile:', fetchError);
+        return;
+      }
+
+      if (!existingProfile) {
+        // Profile doesn't exist, create it
+        console.log('useAuth: Creating new profile');
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email,
+            first_name: user.user_metadata?.first_name || null,
+            last_name: user.user_metadata?.last_name || null,
+          });
+
+        if (insertError) {
+          console.error('useAuth: Error creating profile:', insertError);
+        } else {
+          console.log('useAuth: Profile created successfully');
+        }
+      } else if (!existingProfile.first_name && user.user_metadata?.first_name) {
+        // Profile exists but missing name data, update it
+        console.log('useAuth: Updating profile with user metadata');
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            first_name: user.user_metadata.first_name,
+            last_name: user.user_metadata.last_name,
+          })
+          .eq('id', user.id);
+
+        if (updateError) {
+          console.error('useAuth: Error updating profile:', updateError);
+        } else {
+          console.log('useAuth: Profile updated successfully');
+        }
+      }
+    } catch (error) {
+      console.error('useAuth: Error in ensureProfileExists:', error);
+    }
+  };
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
     console.log('useAuth: Attempting signup for:', email);
@@ -61,26 +123,10 @@ export function useAuth() {
       }
 
       console.log('useAuth: Signup successful, user:', data.user?.email);
+      console.log('useAuth: User metadata:', data.user?.user_metadata);
 
-      // Create profile if user was created
-      if (data.user && !data.user.email_confirmed_at) {
-        console.log('useAuth: Creating profile for new user');
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            email: data.user.email,
-            first_name: firstName,
-            last_name: lastName,
-          });
-
-        if (profileError) {
-          console.error('useAuth: Profile creation error:', profileError);
-          // Don't throw here as the user was created successfully
-        } else {
-          console.log('useAuth: Profile created successfully');
-        }
-      }
+      // Note: Profile will be created automatically when user confirms email
+      // via the onAuthStateChange listener above
 
       return data;
     } catch (error) {

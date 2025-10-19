@@ -1,16 +1,16 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import Icon from '../../components/Icon';
-import { Text, View, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
+import { Text, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { commonStyles, colors } from '../../styles/commonStyles';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function SettingsScreen() {
   const { signOut } = useAuth();
   const router = useRouter();
-  const [darkMode, setDarkMode] = useState(false);
+  const { colors } = useTheme();
 
   const handleBack = () => {
     router.back();
@@ -48,19 +48,18 @@ export default function SettingsScreen() {
       onPress: () => router.push('/profile/notification-settings'),
     },
     {
-      title: 'Dunkler Modus',
-      subtitle: 'Dunkles Design verwenden',
-      icon: 'moon',
-      type: 'switch',
-      value: darkMode,
-      onToggle: setDarkMode,
+      title: 'Design & Theme',
+      subtitle: 'Farbschema und Darstellung anpassen',
+      icon: 'color-palette',
+      type: 'action',
+      onPress: () => router.push('/profile/theme-settings'),
     },
     {
       title: 'Datenschutz',
       subtitle: 'Datenschutzrichtlinien und Einstellungen',
       icon: 'shield',
       type: 'action',
-      onPress: () => Alert.alert('Info', 'Datenschutzeinstellungen werden bald verfügbar sein'),
+      onPress: () => router.push('/profile/datenschutz'),
     },
     {
       title: 'Über die App',
@@ -79,18 +78,43 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <SafeAreaView style={commonStyles.container}>
-      <View style={commonStyles.header}>
-        <TouchableOpacity onPress={handleBack} style={commonStyles.backButton}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        backgroundColor: colors.surface,
+      }}>
+        <TouchableOpacity onPress={handleBack} style={{ padding: 8, marginRight: 12 }}>
           <Icon name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Einstellungen</Text>
+        <Text style={{ fontSize: 20, fontWeight: '600', color: colors.text }}>
+          Einstellungen
+        </Text>
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
-        <View style={commonStyles.card}>
-          <Text style={[commonStyles.subtitle, { marginBottom: 20 }]}>
+      <ScrollView style={{ flex: 1, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
+        <View style={{
+          backgroundColor: colors.surface,
+          borderRadius: 16,
+          padding: 20,
+          marginTop: 20,
+          shadowColor: colors.black,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 3,
+        }}>
+          <Text style={{
+            fontSize: 16,
+            fontWeight: '600',
+            color: colors.text,
+            marginBottom: 20,
+          }}>
             App-Einstellungen
           </Text>
 
@@ -104,8 +128,7 @@ export default function SettingsScreen() {
                 borderBottomWidth: index < settingsOptions.length - 1 ? 1 : 0,
                 borderBottomColor: colors.border,
               }}
-              onPress={option.type === 'action' ? option.onPress : undefined}
-              disabled={option.type === 'switch'}
+              onPress={option.onPress}
             >
               <View style={{
                 width: 40,
@@ -120,31 +143,37 @@ export default function SettingsScreen() {
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
                   {option.title}
                 </Text>
-                <Text style={[commonStyles.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 2 }}>
                   {option.subtitle}
                 </Text>
               </View>
 
-              {option.type === 'switch' ? (
-                <Switch
-                  value={option.value}
-                  onValueChange={option.onToggle}
-                  trackColor={{ false: colors.border, true: colors.primary + '40' }}
-                  thumbColor={option.value ? colors.primary : colors.textSecondary}
-                />
-              ) : (
-                <Icon name="chevron-forward" size={20} color={colors.textSecondary} />
-              )}
+              <Icon name="chevron-forward" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           ))}
         </View>
 
         {/* Account Actions */}
-        <View style={[commonStyles.card, { marginTop: 20 }]}>
-          <Text style={[commonStyles.subtitle, { marginBottom: 20 }]}>
+        <View style={{
+          backgroundColor: colors.surface,
+          borderRadius: 16,
+          padding: 20,
+          marginTop: 20,
+          shadowColor: colors.black,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 3,
+        }}>
+          <Text style={{
+            fontSize: 16,
+            fontWeight: '600',
+            color: colors.text,
+            marginBottom: 20,
+          }}>
             Account
           </Text>
 
@@ -169,10 +198,10 @@ export default function SettingsScreen() {
             </View>
 
             <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.text, { fontWeight: '600', color: colors.error }]}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.error }}>
                 Abmelden
               </Text>
-              <Text style={[commonStyles.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+              <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 2 }}>
                 Von deinem Account abmelden
               </Text>
             </View>
@@ -182,14 +211,25 @@ export default function SettingsScreen() {
         </View>
 
         {/* Version Info */}
-        <View style={[commonStyles.card, { marginTop: 20, marginBottom: 40 }]}>
-          <Text style={[commonStyles.caption, { textAlign: 'center', color: colors.textSecondary }]}>
+        <View style={{
+          backgroundColor: colors.surface,
+          borderRadius: 16,
+          padding: 20,
+          marginTop: 20,
+          marginBottom: 40,
+          shadowColor: colors.black,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 3,
+        }}>
+          <Text style={{ fontSize: 14, textAlign: 'center', color: colors.textSecondary }}>
             Pickleball Salzburg Union
           </Text>
-          <Text style={[commonStyles.caption, { textAlign: 'center', color: colors.textSecondary, marginTop: 5 }]}>
+          <Text style={{ fontSize: 14, textAlign: 'center', color: colors.textSecondary, marginTop: 5 }}>
             Version 1.0.0
           </Text>
-          <Text style={[commonStyles.caption, { textAlign: 'center', color: colors.success, marginTop: 5 }]}>
+          <Text style={{ fontSize: 14, textAlign: 'center', color: colors.success, marginTop: 5 }}>
             📱 Lokale Bildspeicherung aktiv
           </Text>
         </View>

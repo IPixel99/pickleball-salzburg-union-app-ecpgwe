@@ -25,7 +25,7 @@ const lightColors = {
   
   // Background colors
   background: '#FFFFFF',
-  backgroundSecondary: '#F8F9FA',
+  backgroundSecondary: '#F5F5F5',
   surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
   
@@ -67,19 +67,19 @@ const darkColors = {
   accentPink: '#F20574',
   
   // Background colors
-  background: '#0A0A0A',
-  backgroundSecondary: '#1A1A1A',
-  surface: '#1F1F1F',
-  surfaceElevated: '#2A2A2A',
+  background: '#121212',
+  backgroundSecondary: '#1E1E1E',
+  surface: '#252525',
+  surfaceElevated: '#2D2D2D',
   
   // Text colors
   text: '#FFFFFF',
-  textSecondary: '#B0B0B0',
-  textLight: '#808080',
+  textSecondary: '#CCCCCC',
+  textLight: '#999999',
   
   // Border colors
-  border: '#333333',
-  borderLight: '#2A2A2A',
+  border: '#3A3A3A',
+  borderLight: '#2D2D2D',
   
   // Status colors
   success: '#10B981',
@@ -93,9 +93,9 @@ const darkColors = {
   overlay: 'rgba(0, 0, 0, 0.7)',
   
   // Shadow colors
-  shadowLight: 'rgba(242, 5, 5, 0.2)',
-  shadowMedium: 'rgba(242, 5, 5, 0.3)',
-  shadowDark: 'rgba(0, 0, 0, 0.5)',
+  shadowLight: 'rgba(242, 5, 5, 0.3)',
+  shadowMedium: 'rgba(242, 5, 5, 0.4)',
+  shadowDark: 'rgba(0, 0, 0, 0.6)',
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);

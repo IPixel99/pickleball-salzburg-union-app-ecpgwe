@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Text, View, ScrollView, TouchableOpacity, Alert, RefreshControl, Image } from 'react-native';
+import { Text, View, ScrollView, TouchableOpacity, Alert, RefreshControl, Image, StyleSheet } from 'react-native';
 import { commonStyles, colors } from '../../styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -65,16 +65,28 @@ export default function NewsScreen() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('de-DE', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return 'Heute';
+    } else if (diffDays === 1) {
+      return 'Gestern';
+    } else if (diffDays < 7) {
+      return `Vor ${diffDays} Tagen`;
+    } else {
+      return date.toLocaleDateString('de-DE', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    }
   };
 
-  const truncateContent = (content: string, maxLength: number = 150) => {
+  const truncateContent = (content: string, maxLength: number = 120) => {
     if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
+    return content.substring(0, maxLength).trim() + '...';
   };
 
   if (loading) {
@@ -97,89 +109,235 @@ export default function NewsScreen() {
         }
       >
         {/* Header */}
-        <View style={{ marginBottom: 30 }}>
-          <Text style={[commonStyles.title, { color: colors.primary }]}>Nachrichten</Text>
-          <Text style={commonStyles.textLight}>
-            Bleibe auf dem Laufenden mit den neuesten Vereinsnachrichten
+        <View style={styles.header}>
+          <Text style={[commonStyles.title, { color: colors.primary, fontSize: 32, marginBottom: 8 }]}>
+            Nachrichten
+          </Text>
+          <Text style={[commonStyles.textLight, { fontSize: 15 }]}>
+            Bleibe auf dem Laufenden
           </Text>
         </View>
 
         {/* News Posts */}
         {newsPosts.length === 0 ? (
-          <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
-            <Icon name="newspaper" size={48} color={colors.textLight} style={{ marginBottom: 16 }} />
-            <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 8 }]}>
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIconContainer}>
+              <Icon name="newspaper-outline" size={56} color={colors.textLight} />
+            </View>
+            <Text style={[commonStyles.text, styles.emptyTitle]}>
               Keine Nachrichten verfügbar
             </Text>
-            <Text style={[commonStyles.textLight, { textAlign: 'center' }]}>
+            <Text style={[commonStyles.textLight, styles.emptyDescription]}>
               Schau später wieder vorbei für die neuesten Updates vom Verein.
             </Text>
           </View>
         ) : (
-          newsPosts.map((post) => (
-            <TouchableOpacity 
-              key={post.id} 
-              style={commonStyles.card}
-              onPress={() => handleReadMore(post.id)}
-            >
-              {/* Image */}
-              {post.image_url && (
-                <Image
-                  source={{ uri: post.image_url }}
-                  style={{
-                    width: '100%',
-                    height: 200,
-                    borderRadius: 8,
-                    marginBottom: 16,
-                    resizeMode: 'cover',
-                  }}
-                />
-              )}
+          <View style={styles.newsGrid}>
+            {newsPosts.map((post, index) => (
+              <TouchableOpacity 
+                key={post.id} 
+                style={[
+                  styles.newsCard,
+                  index === 0 && styles.featuredCard
+                ]}
+                onPress={() => handleReadMore(post.id)}
+                activeOpacity={0.7}
+              >
+                {/* Image - Only render if image_url exists */}
+                {post.image_url && (
+                  <View style={styles.imageContainer}>
+                    <Image
+                      source={{ uri: post.image_url }}
+                      style={styles.newsImage}
+                    />
+                    {/* Gradient Overlay for better text readability on featured card */}
+                    {index === 0 && (
+                      <View style={styles.imageGradient} />
+                    )}
+                  </View>
+                )}
 
-              {/* YouTube Indicator */}
-              {post.youtube_url && (
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginBottom: 12,
-                  padding: 8,
-                  backgroundColor: colors.red,
-                  borderRadius: 6,
-                  alignSelf: 'flex-start',
-                }}>
-                  <Icon name="play" size={16} color={colors.white} style={{ marginRight: 6 }} />
-                  <Text style={[commonStyles.textLight, { color: colors.white, fontSize: 12 }]}>
-                    Video verfügbar
+                {/* Content Container */}
+                <View style={[
+                  styles.contentContainer,
+                  !post.image_url && styles.contentContainerNoImage
+                ]}>
+                  {/* YouTube Badge */}
+                  {post.youtube_url && (
+                    <View style={styles.videoBadge}>
+                      <Icon name="play-circle" size={14} color={colors.white} style={{ marginRight: 4 }} />
+                      <Text style={styles.videoBadgeText}>Video</Text>
+                    </View>
+                  )}
+
+                  {/* Date */}
+                  <View style={styles.dateContainer}>
+                    <Icon name="time-outline" size={14} color={colors.textLight} style={{ marginRight: 4 }} />
+                    <Text style={styles.dateText}>
+                      {formatDate(post.created_at)}
+                    </Text>
+                  </View>
+
+                  {/* Title */}
+                  <Text 
+                    style={[
+                      styles.newsTitle,
+                      index === 0 && styles.featuredTitle
+                    ]}
+                    numberOfLines={index === 0 ? 3 : 2}
+                  >
+                    {post.title}
                   </Text>
-                </View>
-              )}
 
-              {/* Title */}
-              <Text style={[commonStyles.text, { fontWeight: '600', fontSize: 18, marginBottom: 8, color: colors.primary }]}>
-                {post.title}
-              </Text>
-
-              {/* Content Preview */}
-              <Text style={[commonStyles.textLight, { marginBottom: 12, lineHeight: 20 }]}>
-                {truncateContent(post.content)}
-              </Text>
-
-              {/* Footer */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={[commonStyles.textLight, { fontSize: 12 }]}>
-                  {formatDate(post.created_at)}
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={[commonStyles.textLight, { fontSize: 12, marginRight: 4, color: colors.primary }]}>
-                    Weiterlesen
+                  {/* Content Preview */}
+                  <Text 
+                    style={styles.newsContent}
+                    numberOfLines={index === 0 ? 3 : 2}
+                  >
+                    {truncateContent(post.content, index === 0 ? 150 : 100)}
                   </Text>
-                  <Icon name="chevron-forward" size={16} color={colors.primary} />
+
+                  {/* Read More Link */}
+                  <View style={styles.readMoreContainer}>
+                    <Text style={styles.readMoreText}>Weiterlesen</Text>
+                    <Icon name="arrow-forward" size={16} color={colors.primary} />
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
+
+        {/* Bottom Spacing */}
+        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    marginBottom: 24,
+    paddingTop: 8,
+  },
+  newsGrid: {
+    gap: 16,
+  },
+  newsCard: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  featuredCard: {
+    marginBottom: 8,
+  },
+  imageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 200,
+  },
+  newsImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  imageGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    backgroundColor: 'transparent',
+  },
+  contentContainer: {
+    padding: 20,
+  },
+  contentContainerNoImage: {
+    paddingTop: 20,
+  },
+  videoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.red,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  videoBadgeText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  dateText: {
+    fontSize: 13,
+    color: colors.textLight,
+    fontWeight: '500',
+  },
+  newsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 10,
+    lineHeight: 24,
+  },
+  featuredTitle: {
+    fontSize: 22,
+    lineHeight: 28,
+  },
+  newsContent: {
+    fontSize: 14,
+    color: colors.textLight,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  readMoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  readMoreText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: 40,
+  },
+  emptyIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  emptyDescription: {
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+});

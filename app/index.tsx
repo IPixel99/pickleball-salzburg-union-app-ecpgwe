@@ -22,6 +22,7 @@ export default function Index() {
       setOnboardingCompleted(completed === 'true');
     } catch (error) {
       console.error('Error checking onboarding status:', error);
+      // Default to false if there's an error
       setOnboardingCompleted(false);
     }
   };

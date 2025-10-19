@@ -20,64 +20,68 @@ Notifications.setNotificationHandler({
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
   let token: string | null = null;
 
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'Default',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
-    });
+  try {
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'Default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+      });
 
-    // Create channels for different notification types
-    await Notifications.setNotificationChannelAsync('events', {
-      name: 'Event Notifications',
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#4CAF50',
-    });
+      // Create channels for different notification types
+      await Notifications.setNotificationChannelAsync('events', {
+        name: 'Event Notifications',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#4CAF50',
+      });
 
-    await Notifications.setNotificationChannelAsync('news', {
-      name: 'News Notifications',
-      importance: Notifications.AndroidImportance.DEFAULT,
-      vibrationPattern: [0, 250],
-      lightColor: '#2196F3',
-    });
-  }
-
-  if (Device.isDevice) {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    
-    if (finalStatus !== 'granted') {
-      console.log('Failed to get push token for push notification!');
-      return null;
+      await Notifications.setNotificationChannelAsync('news', {
+        name: 'News Notifications',
+        importance: Notifications.AndroidImportance.DEFAULT,
+        vibrationPattern: [0, 250],
+        lightColor: '#2196F3',
+      });
     }
 
-    try {
-      const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+    if (Device.isDevice) {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
       
-      if (!projectId) {
-        console.warn('Project ID not found - push notifications may not work');
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      
+      if (finalStatus !== 'granted') {
+        console.log('Failed to get push token for push notification!');
         return null;
       }
 
-      const pushToken = await Notifications.getExpoPushTokenAsync({
-        projectId,
-      });
-      
-      token = pushToken.data;
-      console.log('Expo push token:', token);
-    } catch (e) {
-      console.error('Error getting push token:', e);
-      return null;
+      try {
+        const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+        
+        if (!projectId) {
+          console.warn('Project ID not found - push notifications may not work');
+          return null;
+        }
+
+        const pushToken = await Notifications.getExpoPushTokenAsync({
+          projectId,
+        });
+        
+        token = pushToken.data;
+        console.log('Expo push token:', token);
+      } catch (e) {
+        console.error('Error getting push token:', e);
+        return null;
+      }
+    } else {
+      console.log('Must use physical device for Push Notifications');
     }
-  } else {
-    console.log('Must use physical device for Push Notifications');
+  } catch (error) {
+    console.error('Error in registerForPushNotificationsAsync:', error);
   }
 
   return token;
@@ -209,14 +213,24 @@ export async function getAllScheduledNotifications(): Promise<Notifications.Noti
  * Check notification permissions
  */
 export async function checkNotificationPermissions(): Promise<boolean> {
-  const { status } = await Notifications.getPermissionsAsync();
-  return status === 'granted';
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    return status === 'granted';
+  } catch (error) {
+    console.error('Error checking notification permissions:', error);
+    return false;
+  }
 }
 
 /**
  * Request notification permissions
  */
 export async function requestNotificationPermissions(): Promise<boolean> {
-  const { status } = await Notifications.requestPermissionsAsync();
-  return status === 'granted';
+  try {
+    const { status } = await Notifications.requestPermissionsAsync();
+    return status === 'granted';
+  } catch (error) {
+    console.error('Error requesting notification permissions:', error);
+    return false;
+  }
 }

@@ -11,30 +11,39 @@ export function useAuth() {
   useEffect(() => {
     console.log('useAuth: Initializing auth state');
     
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.error('useAuth: Error getting initial session:', error);
-      } else {
-        console.log('useAuth: Initial session:', session?.user?.email || 'No session');
-        setSession(session);
-        setUser(session?.user ?? null);
-      }
-      setLoading(false);
-    });
+    // Get initial session with proper error handling
+    supabase.auth.getSession()
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          console.error('useAuth: Error getting initial session:', error);
+        } else {
+          console.log('useAuth: Initial session:', session?.user?.email || 'No session');
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error('useAuth: Unexpected error getting session:', error);
+        setLoading(false);
+      });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('useAuth: Auth state changed:', event, session?.user?.email || 'No user');
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+        try {
+          console.log('useAuth: Auth state changed:', event, session?.user?.email || 'No user');
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
 
-        // When user confirms email, create/update their profile
-        if (event === 'SIGNED_IN' && session?.user) {
-          console.log('useAuth: User signed in, checking profile');
-          await ensureProfileExists(session.user);
+          // When user confirms email, create/update their profile
+          if (event === 'SIGNED_IN' && session?.user) {
+            console.log('useAuth: User signed in, checking profile');
+            await ensureProfileExists(session.user);
+          }
+        } catch (error) {
+          console.error('useAuth: Error in auth state change handler:', error);
         }
       }
     );
@@ -196,6 +205,7 @@ export function useAuth() {
     user,
     session,
     loading,
+    authLoading: loading, // Add alias for backward compatibility
     signUp,
     signIn,
     signOut,

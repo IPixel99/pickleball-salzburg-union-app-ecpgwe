@@ -8,6 +8,11 @@ import Icon from '../../components/Icon';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { isEventUpcoming, getTimeUntilEvent } from '../../utils/dateUtils';
+import { 
+  scheduleEventReminderNotification, 
+  scheduleEventRegistrationNotification,
+  cancelScheduledNotification 
+} from '../../utils/notificationUtils';
 
 interface Event {
   id: string;
@@ -25,6 +30,7 @@ interface Event {
 interface EventWithRegistration extends Event {
   isRegistered: boolean;
   registrationStatus?: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+  notificationId?: string;
 }
 
 export default function EventsScreen() {
@@ -171,7 +177,18 @@ export default function EventsScreen() {
         return;
       }
 
-      Alert.alert('Erfolgreich angemeldet!', 'Du hast dich erfolgreich für das Event angemeldet.');
+      // Find the event to get details for notification
+      const event = events.find(e => e.id === eventId);
+      if (event) {
+        // Send registration confirmation notification
+        await scheduleEventRegistrationNotification(event.title);
+        
+        // Schedule reminder notification
+        const eventStartTime = new Date(event.start_time);
+        await scheduleEventReminderNotification(event.title, eventStartTime, eventId);
+      }
+
+      Alert.alert('Erfolgreich angemeldet! ✅', 'Du erhältst eine Erinnerung vor dem Event.');
       
       // Refresh events to update registration status
       fetchEvents();
@@ -265,7 +282,7 @@ export default function EventsScreen() {
         <View style={{ marginBottom: 30 }}>
           <Text style={[commonStyles.title, { color: colors.primary }]}>Kommende Events</Text>
           <Text style={commonStyles.textLight}>
-            Entdecke die nächsten Pickleball-Events und melde dich an
+            Entdecke die nächsten Pickleball-Events
           </Text>
         </View>
 
@@ -277,7 +294,7 @@ export default function EventsScreen() {
               Keine kommenden Events
             </Text>
             <Text style={[commonStyles.textLight, { textAlign: 'center' }]}>
-              Schau später wieder vorbei oder kontaktiere den Verein für weitere Informationen.
+              Schau später wieder vorbei.
             </Text>
           </View>
         ) : (

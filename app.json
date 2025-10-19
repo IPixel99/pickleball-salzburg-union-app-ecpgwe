@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Natively",
@@ -34,7 +35,15 @@
     "plugins": [
       "expo-font",
       "expo-router",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/natively-dark.png",
+          "color": "#4CAF50",
+          "defaultChannel": "default"
+        }
+      ]
     ],
     "scheme": "natively",
     "experiments": {

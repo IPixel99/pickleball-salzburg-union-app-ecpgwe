@@ -10,7 +10,6 @@ import { commonStyles, colors } from '../../styles/commonStyles';
 export default function SettingsScreen() {
   const { signOut } = useAuth();
   const router = useRouter();
-  const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
 
   const handleBack = () => {
@@ -43,11 +42,10 @@ export default function SettingsScreen() {
   const settingsOptions = [
     {
       title: 'Benachrichtigungen',
-      subtitle: 'Push-Benachrichtigungen für Events und News',
-      icon: 'bell',
-      type: 'switch',
-      value: notifications,
-      onToggle: setNotifications,
+      subtitle: 'Verwalte deine Benachrichtigungen',
+      icon: 'notifications',
+      type: 'action',
+      onPress: () => router.push('/profile/notification-settings'),
     },
     {
       title: 'Dunkler Modus',
@@ -67,7 +65,7 @@ export default function SettingsScreen() {
     {
       title: 'Über die App',
       subtitle: 'Version und Informationen',
-      icon: 'info',
+      icon: 'information-circle',
       type: 'action',
       onPress: () => router.push('/profile/about'),
     },
@@ -84,7 +82,7 @@ export default function SettingsScreen() {
     <SafeAreaView style={commonStyles.container}>
       <View style={commonStyles.header}>
         <TouchableOpacity onPress={handleBack} style={commonStyles.backButton}>
-          <Icon name="arrow-left" size={24} color={colors.text} />
+          <Icon name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={commonStyles.headerTitle}>Einstellungen</Text>
         <View style={{ width: 24 }} />
@@ -138,7 +136,7 @@ export default function SettingsScreen() {
                   thumbColor={option.value ? colors.primary : colors.textSecondary}
                 />
               ) : (
-                <Icon name="chevron-right" size={20} color={colors.textSecondary} />
+                <Icon name="chevron-forward" size={20} color={colors.textSecondary} />
               )}
             </TouchableOpacity>
           ))}
@@ -179,7 +177,7 @@ export default function SettingsScreen() {
               </Text>
             </View>
 
-            <Icon name="chevron-right" size={20} color={colors.textSecondary} />
+            <Icon name="chevron-forward" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 

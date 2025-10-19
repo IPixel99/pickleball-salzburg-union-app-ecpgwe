@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Dimensions,
   Image,
   StyleSheet,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -20,7 +21,9 @@ interface SlideData {
   id: number;
   title: string;
   description: string;
-  image: any;
+  bulletPoints?: string[];
+  image?: any;
+  showImage?: boolean;
   backgroundColor?: string;
 }
 
@@ -28,20 +31,45 @@ const slides: SlideData[] = [
   {
     id: 1,
     title: 'Willkommen bei Pickleball!',
-    description: 'Pickleball ist ein dynamischer Rückschlagsport, der Elemente aus Tennis, Badminton und Tischtennis vereint. Perfekt für alle Altersgruppen und Fitnesslevel!',
-    image: require('../assets/images/057bd0da-9f85-41b0-afc8-77aaf54812b3.png'),
+    description: 'Pickleball ist der am schnellsten wachsende Sport der Welt! Eine perfekte Mischung aus Tennis, Badminton und Tischtennis, die Menschen jeden Alters und Fitnesslevels begeistert.',
+    bulletPoints: [
+      '🎾 Einfach zu erlernen, schwer zu meistern',
+      '👥 Sozial und gemeinschaftsorientiert',
+      '💪 Großartiges Workout für Körper und Geist',
+      '🏆 Wettkampf oder Freizeitspaß - du entscheidest',
+      '❤️ Schonend für die Gelenke',
+    ],
+    showImage: false,
   },
   {
     id: 2,
-    title: 'Pickleball Salzburg',
-    description: 'Werde Teil unserer lebendigen Community! Wir bieten Training, Turniere und geselliges Spielen für Anfänger und Fortgeschrittene.',
-    image: require('../assets/images/afaf55b7-8bc4-4484-ba5a-5d8e30858e75.png'),
+    title: 'Pickleball Salzburg Union',
+    description: 'Werde Teil der aktivsten Pickleball-Community in Salzburg! Wir sind mehr als nur ein Sportverein - wir sind eine Familie von Pickleball-Enthusiasten.',
+    bulletPoints: [
+      '🏅 Professionelles Training für alle Levels',
+      '🎯 Regelmäßige Turniere und Events',
+      '🤝 Freundliche und einladende Community',
+      '📍 Moderne Spielstätten in Salzburg',
+      '📅 Flexible Trainingszeiten',
+      '🎉 Soziale Events und Teambuilding',
+    ],
+    image: require('../assets/images/f20db83f-0ba2-457f-99a4-dca9816f4437.png'),
+    showImage: true,
   },
   {
     id: 3,
     title: 'Bereit zum Spielen?',
-    description: 'Melde dich jetzt an und entdecke die Freude am Pickleball. Finde Spielpartner, nimm an Events teil und verbessere dein Spiel!',
+    description: 'Starte jetzt deine Pickleball-Reise mit uns! Egal ob Anfänger oder erfahrener Spieler - bei uns findest du die perfekte Umgebung, um dein Spiel zu verbessern und neue Freunde zu finden.',
+    bulletPoints: [
+      '📱 Einfache Event-Anmeldung über die App',
+      '👫 Finde Spielpartner in deinem Level',
+      '📊 Verfolge deinen Fortschritt',
+      '🏆 Nimm an Turnieren teil',
+      '💬 Bleib mit der Community verbunden',
+      '🎓 Lerne von erfahrenen Trainern',
+    ],
     image: require('../assets/images/474ae733-3cc0-4d50-bb7c-53d07d96da23.png'),
+    showImage: true,
   },
 ];
 
@@ -53,6 +81,38 @@ export default function OnboardingSlider({ onComplete }: OnboardingSliderProps) 
   const [currentSlide, setCurrentSlide] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const router = useRouter();
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    // Reset and start animations when slide changes
+    fadeAnim.setValue(0);
+    slideAnim.setValue(50);
+    scaleAnim.setValue(0.8);
+
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [currentSlide]);
 
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {
@@ -78,7 +138,9 @@ export default function OnboardingSlider({ onComplete }: OnboardingSliderProps) 
 
   const handleScroll = (event: any) => {
     const slideIndex = Math.round(event.nativeEvent.contentOffset.x / screenWidth);
-    setCurrentSlide(slideIndex);
+    if (slideIndex !== currentSlide) {
+      setCurrentSlide(slideIndex);
+    }
   };
 
   const handleRegister = () => {
@@ -126,14 +188,62 @@ export default function OnboardingSlider({ onComplete }: OnboardingSliderProps) 
               slide.backgroundColor && { backgroundColor: slide.backgroundColor },
             ]}
           >
-            <View style={styles.imageContainer}>
-              <Image source={slide.image} style={styles.slideImage} resizeMode="cover" />
-            </View>
+            {/* Animated Content */}
+            <Animated.View
+              style={[
+                styles.animatedContent,
+                {
+                  opacity: fadeAnim,
+                  transform: [
+                    { translateY: slideAnim },
+                    { scale: scaleAnim },
+                  ],
+                },
+              ]}
+            >
+              {/* Image Container - Only show if showImage is true */}
+              {slide.showImage && slide.image && (
+                <View style={styles.imageContainer}>
+                  <Image source={slide.image} style={styles.slideImage} resizeMode="contain" />
+                </View>
+              )}
 
-            <View style={styles.contentContainer}>
-              <Text style={styles.title}>{slide.title}</Text>
-              <Text style={styles.description}>{slide.description}</Text>
-            </View>
+              {/* Content Container */}
+              <View style={[
+                styles.contentContainer,
+                !slide.showImage && styles.contentContainerNoImage
+              ]}>
+                <Text style={styles.title}>{slide.title}</Text>
+                <Text style={styles.description}>{slide.description}</Text>
+
+                {/* Bullet Points */}
+                {slide.bulletPoints && (
+                  <View style={styles.bulletPointsContainer}>
+                    {slide.bulletPoints.map((point, idx) => (
+                      <Animated.View
+                        key={idx}
+                        style={[
+                          styles.bulletPoint,
+                          {
+                            opacity: fadeAnim,
+                            transform: [
+                              {
+                                translateX: fadeAnim.interpolate({
+                                  inputRange: [0, 1],
+                                  outputRange: [-20, 0],
+                                }),
+                              },
+                            ],
+                          },
+                        ]}
+                      >
+                        <Text style={styles.bulletPointText}>{point}</Text>
+                      </Animated.View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </Animated.View>
           </View>
         ))}
       </ScrollView>
@@ -141,11 +251,21 @@ export default function OnboardingSlider({ onComplete }: OnboardingSliderProps) 
       {/* Page Indicators */}
       <View style={styles.indicatorContainer}>
         {slides.map((_, index) => (
-          <View
+          <Animated.View
             key={index}
             style={[
               styles.indicator,
               index === currentSlide ? styles.activeIndicator : styles.inactiveIndicator,
+              index === currentSlide && {
+                transform: [
+                  {
+                    scale: scaleAnim.interpolate({
+                      inputRange: [0.8, 1],
+                      outputRange: [1, 1.2],
+                    }),
+                  },
+                ],
+              },
             ]}
           />
         ))}
@@ -155,25 +275,36 @@ export default function OnboardingSlider({ onComplete }: OnboardingSliderProps) 
       <View style={styles.buttonContainer}>
         {isLastSlide ? (
           // Final slide - Show Register and Login buttons
-          <View style={styles.finalButtonsContainer}>
+          <Animated.View
+            style={[
+              styles.finalButtonsContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
             <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
               <Text style={styles.registerButtonText}>Registrieren</Text>
+              <Icon name="arrow-forward" size={20} color={colors.white} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
               <Text style={styles.loginButtonText}>Anmelden</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         ) : (
           // Navigation buttons for other slides
           <View style={styles.navigationContainer}>
             {!isFirstSlide && (
               <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                <Icon name="arrow-back" size={20} color={colors.text} />
                 <Text style={styles.backButtonText}>Zurück</Text>
               </TouchableOpacity>
             )}
             <View style={{ flex: 1 }} />
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.nextButtonText}>Weiter</Text>
+              <Icon name="arrow-forward" size={20} color={colors.white} />
             </TouchableOpacity>
           </View>
         )}
@@ -197,6 +328,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   skipButtonText: {
     color: colors.text,
@@ -214,25 +350,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     backgroundColor: colors.background,
   },
-  imageContainer: {
+  animatedContent: {
     flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
-    maxHeight: '55%',
+    height: 200,
     marginTop: 80,
-    borderRadius: 20,
-    overflow: 'hidden',
+    marginBottom: 30,
   },
   slideImage: {
-    width: '100%',
+    width: '80%',
     height: '100%',
-    borderRadius: 20,
   },
   contentContainer: {
-    paddingTop: 40,
     paddingBottom: 120,
     alignItems: 'center',
+    width: '100%',
+  },
+  contentContainerNoImage: {
+    paddingTop: 60,
   },
   title: {
     fontSize: 32,
@@ -248,6 +390,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: 10,
+    marginBottom: 30,
+  },
+  bulletPointsContainer: {
+    width: '100%',
+    paddingHorizontal: 10,
+  },
+  bulletPoint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    paddingHorizontal: 10,
+  },
+  bulletPointText: {
+    fontSize: 15,
+    color: colors.text,
+    lineHeight: 22,
+    flex: 1,
   },
   indicatorContainer: {
     flexDirection: 'row',
@@ -280,6 +439,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -311,10 +473,13 @@ const styles = StyleSheet.create({
   backButton: {
     backgroundColor: colors.backgroundSecondary,
     paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   backButtonText: {
     color: colors.text,
@@ -324,13 +489,16 @@ const styles = StyleSheet.create({
   nextButton: {
     backgroundColor: colors.primary,
     paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     borderRadius: 20,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   nextButtonText: {
     color: colors.white,

@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   Dimensions,
   Image,
   StyleSheet,
-  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -59,14 +58,11 @@ const slides: SlideData[] = [
   {
     id: 3,
     title: 'Bereit zum Spielen?',
-    description: 'Starte jetzt deine Pickleball-Reise mit uns! Egal ob Anfänger oder erfahrener Spieler - bei uns findest du die perfekte Umgebung, um dein Spiel zu verbessern und neue Freunde zu finden.',
+    description: 'Starte jetzt deine Pickleball-Reise mit uns!',
     bulletPoints: [
-      '📱 Einfache Event-Anmeldung über die App',
-      '👫 Finde Spielpartner in deinem Level',
-      '📊 Verfolge deinen Fortschritt',
+      '📱 Event-Anmeldung über die App',
+      '👫 Finde Spielpartner',
       '🏆 Nimm an Turnieren teil',
-      '💬 Bleib mit der Community verbunden',
-      '🎓 Lerne von erfahrenen Trainern',
     ],
     image: require('../assets/images/474ae733-3cc0-4d50-bb7c-53d07d96da23.png'),
     showImage: true,
@@ -81,38 +77,6 @@ export default function OnboardingSlider({ onComplete }: OnboardingSliderProps) 
   const [currentSlide, setCurrentSlide] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const router = useRouter();
-
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-
-  useEffect(() => {
-    // Reset and start animations when slide changes
-    fadeAnim.setValue(0);
-    slideAnim.setValue(50);
-    scaleAnim.setValue(0.8);
-
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [currentSlide]);
 
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {
@@ -188,19 +152,8 @@ export default function OnboardingSlider({ onComplete }: OnboardingSliderProps) 
               slide.backgroundColor && { backgroundColor: slide.backgroundColor },
             ]}
           >
-            {/* Animated Content */}
-            <Animated.View
-              style={[
-                styles.animatedContent,
-                {
-                  opacity: fadeAnim,
-                  transform: [
-                    { translateY: slideAnim },
-                    { scale: scaleAnim },
-                  ],
-                },
-              ]}
-            >
+            {/* Content */}
+            <View style={styles.content}>
               {/* Image Container - Only show if showImage is true */}
               {slide.showImage && slide.image && (
                 <View style={styles.imageContainer}>
@@ -220,30 +173,14 @@ export default function OnboardingSlider({ onComplete }: OnboardingSliderProps) 
                 {slide.bulletPoints && (
                   <View style={styles.bulletPointsContainer}>
                     {slide.bulletPoints.map((point, idx) => (
-                      <Animated.View
-                        key={idx}
-                        style={[
-                          styles.bulletPoint,
-                          {
-                            opacity: fadeAnim,
-                            transform: [
-                              {
-                                translateX: fadeAnim.interpolate({
-                                  inputRange: [0, 1],
-                                  outputRange: [-20, 0],
-                                }),
-                              },
-                            ],
-                          },
-                        ]}
-                      >
+                      <View key={idx} style={styles.bulletPoint}>
                         <Text style={styles.bulletPointText}>{point}</Text>
-                      </Animated.View>
+                      </View>
                     ))}
                   </View>
                 )}
               </View>
-            </Animated.View>
+            </View>
           </View>
         ))}
       </ScrollView>
@@ -251,21 +188,11 @@ export default function OnboardingSlider({ onComplete }: OnboardingSliderProps) 
       {/* Page Indicators */}
       <View style={styles.indicatorContainer}>
         {slides.map((_, index) => (
-          <Animated.View
+          <View
             key={index}
             style={[
               styles.indicator,
               index === currentSlide ? styles.activeIndicator : styles.inactiveIndicator,
-              index === currentSlide && {
-                transform: [
-                  {
-                    scale: scaleAnim.interpolate({
-                      inputRange: [0.8, 1],
-                      outputRange: [1, 1.2],
-                    }),
-                  },
-                ],
-              },
             ]}
           />
         ))}
@@ -275,15 +202,7 @@ export default function OnboardingSlider({ onComplete }: OnboardingSliderProps) 
       <View style={styles.buttonContainer}>
         {isLastSlide ? (
           // Final slide - Show Register and Login buttons
-          <Animated.View
-            style={[
-              styles.finalButtonsContainer,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
+          <View style={styles.finalButtonsContainer}>
             <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
               <Text style={styles.registerButtonText}>Registrieren</Text>
               <Icon name="arrow-forward" size={20} color={colors.white} />
@@ -291,7 +210,7 @@ export default function OnboardingSlider({ onComplete }: OnboardingSliderProps) 
             <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
               <Text style={styles.loginButtonText}>Anmelden</Text>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         ) : (
           // Navigation buttons for other slides
           <View style={styles.navigationContainer}>
@@ -350,7 +269,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     backgroundColor: colors.background,
   },
-  animatedContent: {
+  content: {
     flex: 1,
     width: '100%',
     justifyContent: 'center',

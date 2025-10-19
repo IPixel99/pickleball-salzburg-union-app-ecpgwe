@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -9,11 +9,11 @@ import Icon from '../components/Icon';
 import { commonStyles, colors, buttonStyles, buttonTextStyles } from '../styles/commonStyles';
 
 interface MembershipInfo {
-  memberships: Array<{
+  memberships: {
     type: 'summer_season' | 'ten_block' | 'pay_by_play';
     credits?: number;
     displayName: string;
-  }>;
+  }[];
   primaryMembership: string;
 }
 
@@ -28,30 +28,22 @@ export default function TestMembershipScreen() {
   const { user } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (user) {
-      fetchMembershipInfo();
-    } else {
-      setIsLoading(false);
-    }
-  }, [user]);
-
   const addTestResult = (message: string) => {
     setTestResults(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
   };
 
-  const fetchMembershipInfo = async () => {
+  const fetchMembershipInfo = useCallback(async () => {
     if (!user) return;
 
     try {
       console.log('Fetching membership info for user:', user.id);
       addTestResult(`Fetching membership info for user: ${user.id}`);
       
-      const memberships: Array<{
+      const memberships: {
         type: 'summer_season' | 'ten_block' | 'pay_by_play';
         credits?: number;
         displayName: string;
-      }> = [];
+      }[] = [];
 
       // Check summer_season_members
       const { data: summerData, error: summerError } = await supabase
@@ -138,7 +130,15 @@ export default function TestMembershipScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchMembershipInfo();
+    } else {
+      setIsLoading(false);
+    }
+  }, [user, fetchMembershipInfo]);
 
   const handleBack = () => {
     router.back();

@@ -6,8 +6,8 @@ import { registerForPushNotificationsAsync } from '../utils/notificationUtils';
 
 export function useNotifications() {
   const router = useRouter();
-  const notificationListener = useRef<Notifications.EventSubscription>();
-  const responseListener = useRef<Notifications.EventSubscription>();
+  const notificationListener = useRef<Notifications.Subscription>();
+  const responseListener = useRef<Notifications.Subscription>();
 
   useEffect(() => {
     // Register for push notifications
@@ -54,10 +54,10 @@ export function useNotifications() {
 
     return () => {
       if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+        notificationListener.current.remove();
       }
       if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+        responseListener.current.remove();
       }
     };
   }, [router]);

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -41,37 +41,7 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
   const [refreshing, setRefreshing] = useState(false);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      fetchRegistrations();
-    } else {
-      setLoading(false);
-    }
-  }, [user]);
-
-  // Set up automatic refresh when component is focused
-  useFocusEffect(
-    React.useCallback(() => {
-      if (user) {
-        console.log('EventRegistrations focused - setting up auto refresh');
-        
-        // Set up automatic refresh every 30 seconds
-        refreshIntervalRef.current = setInterval(() => {
-          console.log('Auto-refreshing event registrations');
-          fetchRegistrations();
-        }, 30000);
-
-        return () => {
-          console.log('EventRegistrations unfocused - clearing auto refresh');
-          if (refreshIntervalRef.current) {
-            clearInterval(refreshIntervalRef.current);
-          }
-        };
-      }
-    }, [user])
-  );
-
-  const fetchRegistrations = async () => {
+  const fetchRegistrations = useCallback(async () => {
     if (!user) {
       console.log('No user found, skipping registration fetch');
       setLoading(false);
@@ -119,9 +89,39 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user]);
 
-  const processRegistrations = (data: any[]) => {
+  useEffect(() => {
+    if (user) {
+      fetchRegistrations();
+    } else {
+      setLoading(false);
+    }
+  }, [user, fetchRegistrations]);
+
+  // Set up automatic refresh when component is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user) {
+        console.log('EventRegistrations focused - setting up auto refresh');
+        
+        // Set up automatic refresh every 30 seconds
+        refreshIntervalRef.current = setInterval(() => {
+          console.log('Auto-refreshing event registrations');
+          fetchRegistrations();
+        }, 30000);
+
+        return () => {
+          console.log('EventRegistrations unfocused - clearing auto refresh');
+          if (refreshIntervalRef.current) {
+            clearInterval(refreshIntervalRef.current);
+          }
+        };
+      }
+    }, [user, fetchRegistrations])
+  );
+
+  const processRegistrations = useCallback((data: any[]) => {
     // Filter to show only upcoming events and sort by start_time
     const upcomingRegistrations = data
       .filter(reg => {
@@ -147,7 +147,7 @@ export default function EventRegistrations({ showAll = false, limit = 3, onViewA
     // Apply limit if not showing all
     const finalRegistrations = showAll ? upcomingRegistrations : upcomingRegistrations.slice(0, limit);
     setRegistrations(finalRegistrations);
-  };
+  }, [showAll, limit]);
 
   const onRefresh = () => {
     setRefreshing(true);

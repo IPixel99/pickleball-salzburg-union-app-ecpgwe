@@ -1,18 +1,19 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Text, View, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
-import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
+import { Text, View, ScrollView, TouchableOpacity, Alert, RefreshControl, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Icon from '../../components/Icon';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '../../contexts/ThemeContext';
 import { isEventUpcoming, getTimeUntilEvent } from '../../utils/dateUtils';
 import { 
   scheduleEventReminderNotification, 
   scheduleEventRegistrationNotification,
   cancelScheduledNotification 
 } from '../../utils/notificationUtils';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface Event {
   id: string;
@@ -36,6 +37,7 @@ interface EventWithRegistration extends Event {
 export default function EventsScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const { theme, colors } = useTheme();
   const [events, setEvents] = useState<EventWithRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -106,7 +108,7 @@ export default function EventsScreen() {
       case 'GAME':
         return colors.primary;
       case 'TOURNAMENT':
-        return colors.yellow;
+        return colors.accent;
       case 'PRACTICE':
         return colors.success;
       default:
@@ -259,41 +261,276 @@ export default function EventsScreen() {
     return description.substring(0, maxLength) + '...';
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: 20,
+      paddingTop: 20,
+    },
+    centerContent: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    header: {
+      marginBottom: 30,
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: colors.primary,
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: 16,
+      color: colors.textSecondary,
+    },
+    emptyCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      alignItems: 'center',
+      padding: 40,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    emptyText: {
+      fontSize: 16,
+      color: colors.text,
+      textAlign: 'center',
+      marginBottom: 8,
+      fontWeight: '600',
+    },
+    emptySubtext: {
+      fontSize: 14,
+      color: colors.textLight,
+      textAlign: 'center',
+    },
+    eventCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 20,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: theme === 'dark' ? colors.shadowDark : colors.shadowLight,
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: theme === 'dark' ? 0.3 : 0.1,
+      shadowRadius: 12,
+      elevation: 5,
+    },
+    nextEventCard: {
+      borderWidth: 2,
+      borderColor: colors.primary,
+      backgroundColor: theme === 'dark' ? colors.surfaceElevated : colors.surface,
+      shadowColor: colors.primary,
+      shadowOpacity: theme === 'dark' ? 0.4 : 0.2,
+      shadowRadius: 16,
+      elevation: 8,
+    },
+    badge: {
+      position: 'absolute',
+      top: -8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 12,
+      zIndex: 1,
+      shadowColor: colors.black,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    nextEventBadge: {
+      right: 16,
+      backgroundColor: colors.primary,
+    },
+    registrationBadge: {
+      left: 16,
+    },
+    badgeText: {
+      color: colors.white,
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 0.5,
+    },
+    eventHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    iconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+      shadowColor: colors.black,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    eventInfo: {
+      flex: 1,
+    },
+    eventTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 4,
+      letterSpacing: 0.3,
+    },
+    eventMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+    },
+    eventType: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginRight: 12,
+      fontWeight: '500',
+    },
+    eventTime: {
+      fontSize: 13,
+      color: colors.primary,
+      fontWeight: '700',
+    },
+    eventDetails: {
+      marginBottom: 16,
+    },
+    detailRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    detailText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginLeft: 10,
+      flex: 1,
+    },
+    description: {
+      marginTop: 12,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+    },
+    descriptionText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      lineHeight: 20,
+      marginBottom: 8,
+    },
+    readMoreButton: {
+      marginTop: 4,
+    },
+    readMoreText: {
+      fontSize: 14,
+      color: colors.primary,
+      fontWeight: '700',
+    },
+    actionButtons: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    button: {
+      flex: 1,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: colors.black,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    secondaryButton: {
+      backgroundColor: theme === 'dark' ? colors.surfaceElevated : colors.white,
+      borderWidth: 2,
+      borderColor: colors.primary,
+    },
+    primaryButton: {
+      backgroundColor: colors.primary,
+    },
+    dangerButton: {
+      backgroundColor: colors.error,
+    },
+    buttonText: {
+      fontSize: 15,
+      fontWeight: '700',
+      letterSpacing: 0.5,
+    },
+    secondaryButtonText: {
+      color: colors.primary,
+    },
+    primaryButtonText: {
+      color: colors.white,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: colors.text,
+    },
+  });
+
   if (loading) {
     return (
-      <SafeAreaView style={commonStyles.container}>
-        <View style={commonStyles.centerContent}>
-          <Text style={commonStyles.text}>Events werden geladen...</Text>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centerContent}>
+          <Text style={styles.loadingText}>Events werden geladen...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={commonStyles.container}>
+    <SafeAreaView style={styles.container}>
       <ScrollView 
-        style={commonStyles.content} 
+        style={styles.content} 
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
         }
       >
         {/* Header */}
-        <View style={{ marginBottom: 30 }}>
-          <Text style={[commonStyles.title, { color: colors.primary }]}>Kommende Events</Text>
-          <Text style={commonStyles.textLight}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Kommende Events</Text>
+          <Text style={styles.subtitle}>
             Entdecke die nächsten Pickleball-Events
           </Text>
         </View>
 
         {/* Events List */}
         {events.length === 0 ? (
-          <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
-            <Icon name="calendar" size={48} color={colors.textLight} style={{ marginBottom: 16 }} />
-            <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 8 }]}>
+          <View style={styles.emptyCard}>
+            <Icon name="calendar" size={56} color={colors.textLight} style={{ marginBottom: 20 }} />
+            <Text style={styles.emptyText}>
               Keine kommenden Events
             </Text>
-            <Text style={[commonStyles.textLight, { textAlign: 'center' }]}>
+            <Text style={styles.emptySubtext}>
               Schau später wieder vorbei.
             </Text>
           </View>
@@ -302,78 +539,59 @@ export default function EventsScreen() {
             <View 
               key={event.id} 
               style={[
-                commonStyles.card,
-                isNextEvent(index) && {
-                  borderWidth: 2,
-                  borderColor: colors.primary,
-                  backgroundColor: colors.primaryLight,
-                }
+                styles.eventCard,
+                isNextEvent(index) && styles.nextEventCard
               ]}
             >
               {/* Next Event Badge */}
               {isNextEvent(index) && (
-                <View style={{
-                  position: 'absolute',
-                  top: -8,
-                  right: 16,
-                  backgroundColor: colors.primary,
-                  paddingHorizontal: 12,
-                  paddingVertical: 4,
-                  borderRadius: 12,
-                  zIndex: 1,
-                }}>
-                  <Text style={[commonStyles.text, { color: colors.white, fontSize: 12, fontWeight: '600' }]}>
-                    Nächstes Event
+                <View style={[styles.badge, styles.nextEventBadge]}>
+                  <Text style={styles.badgeText}>
+                    NÄCHSTES EVENT
                   </Text>
                 </View>
               )}
 
               {/* Registration Status Badge */}
               {event.isRegistered && (
-                <View style={{
-                  position: 'absolute',
-                  top: -8,
-                  left: 16,
-                  backgroundColor: event.registrationStatus === 'ACCEPTED' ? colors.success : 
-                                 event.registrationStatus === 'DECLINED' ? colors.error : colors.yellow,
-                  paddingHorizontal: 12,
-                  paddingVertical: 4,
-                  borderRadius: 12,
-                  zIndex: 1,
-                }}>
-                  <Text style={[commonStyles.text, { color: colors.white, fontSize: 12, fontWeight: '600' }]}>
-                    {event.registrationStatus === 'ACCEPTED' ? 'Bestätigt' : 
-                     event.registrationStatus === 'DECLINED' ? 'Abgelehnt' : 'Angemeldet'}
+                <View style={[
+                  styles.badge, 
+                  styles.registrationBadge,
+                  {
+                    backgroundColor: event.registrationStatus === 'ACCEPTED' ? colors.success : 
+                                   event.registrationStatus === 'DECLINED' ? colors.error : colors.accent
+                  }
+                ]}>
+                  <Text style={styles.badgeText}>
+                    {event.registrationStatus === 'ACCEPTED' ? 'BESTÄTIGT' : 
+                     event.registrationStatus === 'DECLINED' ? 'ABGELEHNT' : 'ANGEMELDET'}
                   </Text>
                 </View>
               )}
 
               {/* Event Header */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, marginTop: event.isRegistered ? 12 : 0 }}>
-                <View style={{
-                  width: 40,
-                  height: 40,
-                  backgroundColor: getEventTypeColor(event.type),
-                  borderRadius: 20,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 12,
-                }}>
+              <View style={[styles.eventHeader, { marginTop: event.isRegistered || isNextEvent(index) ? 12 : 0 }]}>
+                <LinearGradient
+                  colors={[getEventTypeColor(event.type), getEventTypeColor(event.type) + 'CC']}
+                  style={styles.iconContainer}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
                   <Icon 
                     name={getEventTypeIcon(event.type)} 
-                    size={20} 
+                    size={24} 
                     color={colors.white} 
                   />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 2 }]}>
+                </LinearGradient>
+                <View style={styles.eventInfo}>
+                  <Text style={styles.eventTitle}>
                     {event.title}
                   </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={[commonStyles.textLight, { fontSize: 12, marginRight: 8 }]}>
+                  <View style={styles.eventMeta}>
+                    <Text style={styles.eventType}>
                       {getEventTypeLabel(event.type)}
                     </Text>
-                    <Text style={[commonStyles.textLight, { fontSize: 12, color: colors.primary, fontWeight: '600' }]}>
+                    <Text style={styles.eventTime}>
                       {getTimeUntilEvent(event.start_time)}
                     </Text>
                   </View>
@@ -381,34 +599,37 @@ export default function EventsScreen() {
               </View>
 
               {/* Event Details */}
-              <View style={{ marginBottom: 16 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                  <Icon name="calendar" size={16} color={colors.textLight} style={{ marginRight: 8 }} />
-                  <Text style={commonStyles.textLight}>
+              <View style={styles.eventDetails}>
+                <View style={styles.detailRow}>
+                  <Icon name="calendar" size={18} color={colors.textLight} />
+                  <Text style={styles.detailText}>
                     {formatDate(event.start_time)}
                   </Text>
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                  <Icon name="time" size={16} color={colors.textLight} style={{ marginRight: 8 }} />
-                  <Text style={commonStyles.textLight}>
+                <View style={styles.detailRow}>
+                  <Icon name="time" size={18} color={colors.textLight} />
+                  <Text style={styles.detailText}>
                     {formatTime(event.start_time)} - {formatTime(event.end_time)}
                   </Text>
                 </View>
                 {event.location && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                    <Icon name="location" size={16} color={colors.textLight} style={{ marginRight: 8 }} />
-                    <Text style={commonStyles.textLight}>{event.location}</Text>
+                  <View style={styles.detailRow}>
+                    <Icon name="location" size={18} color={colors.textLight} />
+                    <Text style={styles.detailText}>{event.location}</Text>
                   </View>
                 )}
                 {event.description && (
-                  <View style={{ marginTop: 8 }}>
-                    <Text style={[commonStyles.textLight, { marginBottom: 8 }]}>
+                  <View style={styles.description}>
+                    <Text style={styles.descriptionText}>
                       {truncateDescription(event.description)}
                     </Text>
                     {event.description.length > 100 && (
-                      <TouchableOpacity onPress={() => handleReadMore(event.id)}>
-                        <Text style={[commonStyles.text, { color: colors.primary, fontWeight: '600', fontSize: 14 }]}>
-                          Mehr lesen
+                      <TouchableOpacity 
+                        style={styles.readMoreButton}
+                        onPress={() => handleReadMore(event.id)}
+                      >
+                        <Text style={styles.readMoreText}>
+                          Mehr lesen →
                         </Text>
                       </TouchableOpacity>
                     )}
@@ -417,15 +638,12 @@ export default function EventsScreen() {
               </View>
 
               {/* Action Buttons */}
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={styles.actionButtons}>
                 <TouchableOpacity
-                  style={[
-                    buttonStyles.secondary,
-                    { flex: 1 }
-                  ]}
+                  style={[styles.button, styles.secondaryButton]}
                   onPress={() => handleReadMore(event.id)}
                 >
-                  <Text style={[commonStyles.text, { color: colors.primary, fontWeight: '600' }]}>
+                  <Text style={[styles.buttonText, styles.secondaryButtonText]}>
                     Details
                   </Text>
                 </TouchableOpacity>
@@ -433,30 +651,19 @@ export default function EventsScreen() {
                 {user && (
                   event.isRegistered ? (
                     <TouchableOpacity
-                      style={[
-                        buttonStyles.primary,
-                        { 
-                          flex: 1,
-                          backgroundColor: colors.error,
-                          borderColor: colors.error,
-                        }
-                      ]}
+                      style={[styles.button, styles.dangerButton]}
                       onPress={() => handleLeaveEvent(event.id)}
                     >
-                      <Text style={[commonStyles.buttonTextWhite]}>
+                      <Text style={[styles.buttonText, styles.primaryButtonText]}>
                         Abmelden
                       </Text>
                     </TouchableOpacity>
                   ) : (
                     <TouchableOpacity
-                      style={[
-                        buttonStyles.primary, 
-                        { flex: 1 },
-                        isNextEvent(index) && { backgroundColor: colors.primary }
-                      ]}
+                      style={[styles.button, styles.primaryButton]}
                       onPress={() => handleJoinEvent(event.id)}
                     >
-                      <Text style={commonStyles.buttonTextWhite}>
+                      <Text style={[styles.buttonText, styles.primaryButtonText]}>
                         {isNextEvent(index) ? 'Jetzt teilnehmen' : 'Teilnehmen'}
                       </Text>
                     </TouchableOpacity>

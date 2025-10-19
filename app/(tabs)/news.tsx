@@ -130,6 +130,7 @@ export default function NewsScreen() {
       elevation: 6,
       borderWidth: theme === 'dark' ? 1 : 0,
       borderColor: theme === 'dark' ? colors.border : 'transparent',
+      marginBottom: 16,
     },
     featuredCard: {
       marginBottom: 8,
@@ -216,7 +217,7 @@ export default function NewsScreen() {
       gap: 6,
       paddingTop: 8,
       borderTopWidth: 1,
-      borderTopColor: theme === 'dark' ? colors.border : colors.borderLight,
+      borderTopColor: colors.border,
     },
     readMoreText: {
       fontSize: 14,

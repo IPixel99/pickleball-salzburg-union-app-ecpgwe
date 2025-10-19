@@ -4,11 +4,11 @@ import { Text, View, ScrollView, TouchableOpacity, Image, RefreshControl, Activi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Icon from '../../components/Icon';
-import { commonStyles, colors } from '../../styles/commonStyles';
 import QRCodeDisplay from '../../components/QRCodeDisplay';
 import EventRegistrations from '../../components/EventRegistrations';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '../../contexts/ThemeContext';
 import { formatDate, formatTime } from '../../utils/dateUtils';
 
 interface Profile {
@@ -37,6 +37,7 @@ interface Event {
 export default function HomeScreen() {
   const router = useRouter();
   const { user, authLoading } = useAuth();
+  const { colors, theme } = useTheme();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -193,9 +194,9 @@ export default function HomeScreen() {
 
   if (authLoading || loading) {
     return (
-      <SafeAreaView style={[commonStyles.container, commonStyles.centerContent]}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[commonStyles.text, { marginTop: 16 }]}>
+        <Text style={{ color: colors.text, marginTop: 16, fontSize: 16 }}>
           Wird geladen...
         </Text>
       </SafeAreaView>
@@ -204,58 +205,82 @@ export default function HomeScreen() {
 
   if (!user) {
     return (
-      <SafeAreaView style={commonStyles.container}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <ScrollView 
-          style={commonStyles.content} 
+          style={{ flex: 1, paddingHorizontal: 20, paddingTop: 20 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
           }
         >
           {/* Header */}
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 30 }}>
             <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.title, { color: colors.primary }]}>
+              <Text style={{ fontSize: 32, fontWeight: 'bold', color: colors.primary, marginBottom: 8 }}>
                 Willkommen
               </Text>
-              <Text style={commonStyles.textLight}>
+              <Text style={{ fontSize: 14, color: colors.textLight, lineHeight: 20 }}>
                 bei Pickleball Salzburg
               </Text>
             </View>
           </View>
 
           {/* Login Prompt */}
-          <View style={[commonStyles.card, { alignItems: 'center', marginBottom: 30 }]}>
+          <View style={{
+            backgroundColor: colors.surface,
+            borderRadius: 16,
+            padding: 20,
+            marginBottom: 30,
+            alignItems: 'center',
+            shadowColor: theme === 'dark' ? colors.primary : colors.black,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: theme === 'dark' ? 0.3 : 0.1,
+            shadowRadius: 12,
+            elevation: 5,
+          }}>
             <Icon name="person-circle" size={80} color={colors.textLight} />
-            <Text style={[commonStyles.text, { marginTop: 16, marginBottom: 8, textAlign: 'center' }]}>
+            <Text style={{ color: colors.text, fontSize: 16, marginTop: 16, marginBottom: 8, textAlign: 'center' }}>
               Nicht angemeldet
             </Text>
-            <Text style={[commonStyles.textLight, { textAlign: 'center', marginBottom: 24 }]}>
+            <Text style={{ color: colors.textLight, fontSize: 14, textAlign: 'center', marginBottom: 24 }}>
               Melde dich an, um Events zu sehen und teilzunehmen.
             </Text>
             
             <TouchableOpacity
-              style={[
-                {
-                  backgroundColor: colors.primary,
-                  paddingHorizontal: 24,
-                  paddingVertical: 12,
-                  borderRadius: 12,
-                  width: '100%',
-                  alignItems: 'center',
-                }
-              ]}
+              style={{
+                backgroundColor: colors.primary,
+                paddingHorizontal: 24,
+                paddingVertical: 12,
+                borderRadius: 12,
+                width: '100%',
+                alignItems: 'center',
+                shadowColor: colors.primary,
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.4,
+                shadowRadius: 12,
+                elevation: 8,
+              }}
               onPress={() => router.push('/auth/login')}
             >
-              <Text style={[commonStyles.text, { color: colors.white, fontWeight: '600' }]}>
+              <Text style={{ color: colors.white, fontSize: 16, fontWeight: '600' }}>
                 Jetzt anmelden
               </Text>
             </TouchableOpacity>
           </View>
 
           {/* Quick Actions */}
-          <View style={[commonStyles.card, { marginBottom: 30 }]}>
-            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16 }]}>
+          <View style={{
+            backgroundColor: colors.surface,
+            borderRadius: 16,
+            padding: 20,
+            marginBottom: 30,
+            shadowColor: theme === 'dark' ? colors.primary : colors.black,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: theme === 'dark' ? 0.3 : 0.1,
+            shadowRadius: 12,
+            elevation: 5,
+          }}>
+            <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600', marginBottom: 16 }}>
               Schnellzugriff
             </Text>
             
@@ -265,14 +290,14 @@ export default function HomeScreen() {
                   flex: 1,
                   alignItems: 'center',
                   padding: 16,
-                  backgroundColor: colors.background,
+                  backgroundColor: colors.backgroundSecondary,
                   borderRadius: 12,
                   marginRight: 8,
                 }}
                 onPress={handleBookSession}
               >
                 <Icon name="calendar" size={32} color={colors.primary} />
-                <Text style={[commonStyles.text, { marginTop: 8, fontSize: 12, textAlign: 'center' }]}>
+                <Text style={{ color: colors.text, fontSize: 12, marginTop: 8, textAlign: 'center' }}>
                   Events
                 </Text>
               </TouchableOpacity>
@@ -282,14 +307,14 @@ export default function HomeScreen() {
                   flex: 1,
                   alignItems: 'center',
                   padding: 16,
-                  backgroundColor: colors.background,
+                  backgroundColor: colors.backgroundSecondary,
                   borderRadius: 12,
                   marginLeft: 8,
                 }}
                 onPress={handleMyRegistrations}
               >
                 <Icon name="list" size={32} color={colors.primary} />
-                <Text style={[commonStyles.text, { marginTop: 8, fontSize: 12, textAlign: 'center' }]}>
+                <Text style={{ color: colors.text, fontSize: 12, marginTop: 8, textAlign: 'center' }}>
                   Meine Anmeldungen
                 </Text>
               </TouchableOpacity>
@@ -301,21 +326,21 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={commonStyles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView 
-        style={commonStyles.content} 
+        style={{ flex: 1, paddingHorizontal: 20, paddingTop: 20 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
         {/* Header with Profile */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
           <View style={{ flex: 1 }}>
-            <Text style={[commonStyles.title, { color: colors.primary }]}>
+            <Text style={{ fontSize: 32, fontWeight: 'bold', color: colors.primary, marginBottom: 8 }}>
               Hallo {getDisplayName()}!
             </Text>
-            <Text style={commonStyles.textLight}>
+            <Text style={{ fontSize: 14, color: colors.textLight, lineHeight: 20 }}>
               Willkommen zurück
             </Text>
           </View>
@@ -331,11 +356,10 @@ export default function HomeScreen() {
                   width: 50,
                   height: 50,
                   borderRadius: 25,
-                  backgroundColor: colors.background,
+                  backgroundColor: colors.backgroundSecondary,
                 }}
                 onError={(error) => {
                   console.error('Error loading header avatar:', error);
-                  // Don't set avatar_url to null here as it might cause infinite re-renders
                 }}
               />
             ) : (
@@ -368,8 +392,18 @@ export default function HomeScreen() {
         </View>
 
         {/* Quick Actions */}
-        <View style={[commonStyles.card, { marginBottom: 20 }]}>
-          <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 16 }]}>
+        <View style={{
+          backgroundColor: colors.surface,
+          borderRadius: 16,
+          padding: 20,
+          marginBottom: 20,
+          shadowColor: theme === 'dark' ? colors.primary : colors.black,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: theme === 'dark' ? 0.3 : 0.1,
+          shadowRadius: 12,
+          elevation: 5,
+        }}>
+          <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600', marginBottom: 16 }}>
             Schnellzugriff
           </Text>
           
@@ -379,14 +413,14 @@ export default function HomeScreen() {
                 flex: 1,
                 alignItems: 'center',
                 padding: 16,
-                backgroundColor: colors.background,
+                backgroundColor: colors.backgroundSecondary,
                 borderRadius: 12,
                 marginRight: 8,
               }}
               onPress={handleBookSession}
             >
               <Icon name="calendar" size={32} color={colors.primary} />
-              <Text style={[commonStyles.text, { marginTop: 8, fontSize: 12, textAlign: 'center' }]}>
+              <Text style={{ color: colors.text, fontSize: 12, marginTop: 8, textAlign: 'center' }}>
                 Events
               </Text>
             </TouchableOpacity>
@@ -396,14 +430,14 @@ export default function HomeScreen() {
                 flex: 1,
                 alignItems: 'center',
                 padding: 16,
-                backgroundColor: colors.background,
+                backgroundColor: colors.backgroundSecondary,
                 borderRadius: 12,
                 marginLeft: 8,
               }}
               onPress={handleMyRegistrations}
             >
               <Icon name="list" size={32} color={colors.primary} />
-              <Text style={[commonStyles.text, { marginTop: 8, fontSize: 12, textAlign: 'center' }]}>
+              <Text style={{ color: colors.text, fontSize: 12, marginTop: 8, textAlign: 'center' }}>
                 Meine Anmeldungen
               </Text>
             </TouchableOpacity>
@@ -411,13 +445,23 @@ export default function HomeScreen() {
         </View>
 
         {/* Upcoming Events */}
-        <View style={[commonStyles.card, { marginBottom: 20 }]}>
+        <View style={{
+          backgroundColor: colors.surface,
+          borderRadius: 16,
+          padding: 20,
+          marginBottom: 20,
+          shadowColor: theme === 'dark' ? colors.primary : colors.black,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: theme === 'dark' ? 0.3 : 0.1,
+          shadowRadius: 12,
+          elevation: 5,
+        }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+            <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>
               Kommende Events
             </Text>
             <TouchableOpacity onPress={handleViewAllEvents}>
-              <Text style={[commonStyles.text, { color: colors.primary, fontSize: 14 }]}>
+              <Text style={{ color: colors.primary, fontSize: 14 }}>
                 Alle anzeigen
               </Text>
             </TouchableOpacity>
@@ -451,14 +495,14 @@ export default function HomeScreen() {
                 </View>
                 
                 <View style={{ flex: 1 }}>
-                  <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 2 }]}>
+                  <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600', marginBottom: 2 }}>
                     {event.title}
                   </Text>
-                  <Text style={[commonStyles.textLight, { fontSize: 12 }]}>
+                  <Text style={{ color: colors.textLight, fontSize: 12 }}>
                     {formatDate(event.start_time)} • {formatTime(event.start_time)}
                   </Text>
                   {event.location && (
-                    <Text style={[commonStyles.textLight, { fontSize: 12 }]}>
+                    <Text style={{ color: colors.textLight, fontSize: 12 }}>
                       📍 {event.location}
                     </Text>
                   )}
@@ -470,7 +514,7 @@ export default function HomeScreen() {
           ) : (
             <View style={{ alignItems: 'center', paddingVertical: 20 }}>
               <Icon name="calendar" size={48} color={colors.textLight} />
-              <Text style={[commonStyles.textLight, { marginTop: 12, textAlign: 'center' }]}>
+              <Text style={{ color: colors.textLight, fontSize: 14, marginTop: 12, textAlign: 'center' }}>
                 Keine kommenden Events
               </Text>
             </View>
@@ -478,7 +522,17 @@ export default function HomeScreen() {
         </View>
 
         {/* QR Code - Collapsible */}
-        <View style={[commonStyles.card, { marginBottom: 30 }]}>
+        <View style={{
+          backgroundColor: colors.surface,
+          borderRadius: 16,
+          padding: 20,
+          marginBottom: 30,
+          shadowColor: theme === 'dark' ? colors.primary : colors.black,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: theme === 'dark' ? 0.3 : 0.1,
+          shadowRadius: 12,
+          elevation: 5,
+        }}>
           <QRCodeDisplay userId={user.id} collapsible={true} />
         </View>
       </ScrollView>

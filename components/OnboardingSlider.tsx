@@ -27,29 +27,21 @@ interface SlideData {
 const slides: SlideData[] = [
   {
     id: 1,
-    title: 'Welcome to Pickleball!',
-    description: 'Pickleball is a paddle sport that combines elements of tennis, badminton, and table tennis. Two or four players use solid paddles to hit a perforated polymer ball over a net.',
-    image: require('../assets/images/965e2265-5ed8-46fe-80eb-ae51f9e5ad74.png'),
-    backgroundColor: '#8FB5A0',
+    title: 'Willkommen bei Pickleball!',
+    description: 'Pickleball ist ein dynamischer Rückschlagsport, der Elemente aus Tennis, Badminton und Tischtennis vereint. Perfekt für alle Altersgruppen und Fitnesslevel!',
+    image: require('../assets/images/057bd0da-9f85-41b0-afc8-77aaf54812b3.png'),
   },
   {
     id: 2,
     title: 'Pickleball Salzburg',
-    description: 'Join our vibrant community and discover the joy of pickleball. We offer lessons, tournaments, and social play for all skill levels.',
-    image: require('../assets/images/aaa928a6-eb9b-4e82-a66b-466198f4b519.png'),
+    description: 'Werde Teil unserer lebendigen Community! Wir bieten Training, Turniere und geselliges Spielen für Anfänger und Fortgeschrittene.',
+    image: require('../assets/images/afaf55b7-8bc4-4484-ba5a-5d8e30858e75.png'),
   },
   {
     id: 3,
-    title: 'Find your perfect match',
-    description: 'Connect with players of similar skill levels and interests for exciting games.',
-    image: require('../assets/images/96a7a51e-cacd-443e-a054-4afd5c79ad9d.png'),
-  },
-  {
-    id: 4,
-    title: 'Ready to play?',
-    description: 'Join the community and start playing pickleball today!',
-    image: require('../assets/images/88bb7085-7924-4b6e-935b-7db91d9919bc.png'),
-    backgroundColor: '#D4D4AA',
+    title: 'Bereit zum Spielen?',
+    description: 'Melde dich jetzt an und entdecke die Freude am Pickleball. Finde Spielpartner, nimm an Events teil und verbessere dein Spiel!',
+    image: require('../assets/images/474ae733-3cc0-4d50-bb7c-53d07d96da23.png'),
   },
 ];
 
@@ -112,7 +104,7 @@ export default function OnboardingSlider({ onComplete }: OnboardingSliderProps) 
       {/* Skip Button */}
       {!isLastSlide && (
         <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-          <Icon name="help-circle-outline" size={24} color={colors.textLight} />
+          <Text style={styles.skipButtonText}>Überspringen</Text>
         </TouchableOpacity>
       )}
 
@@ -135,7 +127,7 @@ export default function OnboardingSlider({ onComplete }: OnboardingSliderProps) 
             ]}
           >
             <View style={styles.imageContainer}>
-              <Image source={slide.image} style={styles.slideImage} resizeMode="contain" />
+              <Image source={slide.image} style={styles.slideImage} resizeMode="cover" />
             </View>
 
             <View style={styles.contentContainer}>
@@ -165,10 +157,10 @@ export default function OnboardingSlider({ onComplete }: OnboardingSliderProps) 
           // Final slide - Show Register and Login buttons
           <View style={styles.finalButtonsContainer}>
             <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-              <Text style={styles.registerButtonText}>Register</Text>
+              <Text style={styles.registerButtonText}>Registrieren</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-              <Text style={styles.loginButtonText}>Login</Text>
+              <Text style={styles.loginButtonText}>Anmelden</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -176,12 +168,12 @@ export default function OnboardingSlider({ onComplete }: OnboardingSliderProps) 
           <View style={styles.navigationContainer}>
             {!isFirstSlide && (
               <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                <Text style={styles.backButtonText}>Back</Text>
+                <Text style={styles.backButtonText}>Zurück</Text>
               </TouchableOpacity>
             )}
             <View style={{ flex: 1 }} />
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.nextButtonText}>Next</Text>
+              <Text style={styles.nextButtonText}>Weiter</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -201,6 +193,15 @@ const styles = StyleSheet.create({
     right: 20,
     zIndex: 10,
     padding: 8,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  skipButtonText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
@@ -218,15 +219,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
-    maxHeight: '60%',
+    maxHeight: '55%',
+    marginTop: 80,
+    borderRadius: 20,
+    overflow: 'hidden',
   },
   slideImage: {
     width: '100%',
     height: '100%',
-    maxWidth: 400,
-    maxHeight: 400,
+    borderRadius: 20,
   },
   contentContainer: {
+    paddingTop: 40,
     paddingBottom: 120,
     alignItems: 'center',
   },
@@ -258,7 +262,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   activeIndicator: {
-    backgroundColor: colors.text,
+    backgroundColor: colors.primary,
+    width: 24,
   },
   inactiveIndicator: {
     backgroundColor: colors.border,
@@ -275,6 +280,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   registerButtonText: {
     color: colors.white,
@@ -286,6 +296,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.border,
   },
   loginButtonText: {
     color: colors.text,
@@ -301,6 +313,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   backButtonText: {
     color: colors.text,
@@ -312,6 +326,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 20,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   nextButtonText: {
     color: colors.white,
